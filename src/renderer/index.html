@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetSweep</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◎</span>
+      <span class="brand-name">NetSweep</span>
+    </div>
+
+    <div class="range-group">
+      <select id="iface" class="iface-select" title="Network interface"></select>
+      <input id="range" type="text" class="range-input" spellcheck="false"
+             placeholder="e.g. 192.168.1.1-254  or  10.0.0.0/24" />
+      <button id="scanBtn" class="btn btn-primary">
+        <span class="btn-icon">▶</span><span id="scanBtnLabel">Scan</span>
+      </button>
+    </div>
+
+    <div class="toolbar-actions">
+      <button id="exportBtn" class="btn" title="Export results (Ctrl+E)">Export</button>
+      <button id="settingsBtn" class="btn icon-btn" title="Settings">⚙</button>
+      <button id="updateBtn" class="btn icon-btn" title="Check for updates">⭯</button>
+    </div>
+  </header>
+
+  <!-- Progress bar -->
+  <div id="progressWrap" class="progress-wrap hidden">
+    <div id="progressBar" class="progress-bar"></div>
+    <div id="progressText" class="progress-text"></div>
+  </div>
+
+  <!-- Filter row -->
+  <div class="filter-row">
+    <input id="filter" type="text" class="filter-input" spellcheck="false"
+           placeholder="Filter by IP, name, MAC or vendor…" />
+    <label class="chk"><input type="checkbox" id="aliveOnly" /> Alive only</label>
+    <div class="spacer"></div>
+    <span id="statusSummary" class="status-summary">Ready</span>
+  </div>
+
+  <!-- Results table -->
+  <main class="results">
+    <table id="table" class="grid">
+      <thead>
+        <tr>
+          <th data-sort="status" class="col-status">Status</th>
+          <th data-sort="name">Name</th>
+          <th data-sort="ip" class="sorted-asc">IP</th>
+          <th data-sort="mac">MAC address</th>
+          <th data-sort="vendor">Manufacturer</th>
+          <th data-sort="responseMs" class="col-ms">ms</th>
+          <th data-sort="sharesText">Shared resources</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">🖧</div>
+      <p>Enter an IP range and press <strong>Scan</strong> to discover devices on your network.</p>
+      <p class="empty-hint">Tip: the range is prefilled from your active adapter.</p>
+    </div>
+  </main>
+
+  <!-- Status bar -->
+  <footer class="statusbar">
+    <span id="hostCount">0 hosts</span>
+    <span id="aliveCount" class="pill up">0 alive</span>
+    <span id="elapsed"></span>
+    <div class="spacer"></div>
+    <span id="appVersion" class="muted"></span>
+  </footer>
+
+  <!-- Context menu -->
+  <div id="ctxMenu" class="ctx-menu hidden"></div>
+
+  <!-- Details drawer -->
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Host</h2>
+      <button id="drawerClose" class="btn icon-btn">✕</button>
+    </div>
+    <div id="drawerBody" class="drawer-body"></div>
+    <div class="drawer-console-wrap">
+      <div class="drawer-console-head">
+        <span>Console</span>
+        <button id="consoleClear" class="btn tiny">Clear</button>
+      </div>
+      <pre id="console" class="console"></pre>
+    </div>
+  </aside>
+
+  <!-- Settings modal -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><h2>Settings</h2><button id="settingsClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body">
+        <label class="field"><span>Ping timeout (ms)</span><input id="setTimeout" type="number" min="200" max="10000" step="100" /></label>
+        <label class="field"><span>Concurrency (parallel hosts)</span><input id="setConcurrency" type="number" min="1" max="512" /></label>
+        <label class="field checkbox"><input id="setResolve" type="checkbox" /><span>Resolve host names (DNS / NetBIOS)</span></label>
+        <label class="field checkbox"><input id="setPorts" type="checkbox" /><span>Scan common ports / shares</span></label>
+        <label class="field checkbox"><input id="setTcp" type="checkbox" /><span>TCP fallback for hosts that block ping</span></label>
+        <label class="field"><span>Ports to scan (comma separated)</span><input id="setPortList" type="text" spellcheck="false" /></label>
+        <label class="field"><span>Theme</span>
+          <select id="setTheme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select>
+        </label>
+        <label class="field checkbox"><input id="setAutoUpdate" type="checkbox" /><span>Check for updates at startup</span></label>
+      </div>
+      <div class="modal-foot">
+        <button id="settingsSave" class="btn btn-primary">Save</button>
+        <button id="settingsCancel" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update modal -->
+  <div id="updateModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><h2>Software Update</h2><button id="updateClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body">
+        <div id="updateStatusIcon" class="update-icon">⭯</div>
+        <p id="updateMessage" class="update-message">Checking for updates…</p>
+        <div id="updateProgressWrap" class="update-progress hidden">
+          <div class="progress-wrap"><div id="updateProgressBar" class="progress-bar"></div></div>
+          <div id="updateProgressText" class="progress-text small"></div>
+        </div>
+        <pre id="updateNotes" class="update-notes hidden"></pre>
+      </div>
+      <div class="modal-foot">
+        <button id="updateInstallBtn" class="btn btn-primary hidden">Restart &amp; Install</button>
+        <button id="updateCheckBtn" class="btn btn-primary">Check Now</button>
+        <button id="updateLaterBtn" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export modal -->
+  <div id="exportModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head"><h2>Export results</h2><button id="exportClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body">
+        <p class="muted">Choose a format. Alive-only filter and current search are applied.</p>
+        <div class="export-formats">
+          <button class="btn export-fmt" data-fmt="csv">CSV</button>
+          <button class="btn export-fmt" data-fmt="html">HTML</button>
+          <button class="btn export-fmt" data-fmt="xml">XML</button>
+          <button class="btn export-fmt" data-fmt="json">JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About modal -->
+  <div id="aboutModal" class="modal hidden">
+    <div class="modal-card small">
+      <div class="modal-head"><h2>About NetSweep</h2><button id="aboutClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body" id="aboutBody"></div>
+      <div class="modal-foot"><button id="aboutOk" class="btn btn-primary">OK</button></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

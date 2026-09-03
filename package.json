@@ -1,0 +1,103 @@
+{
+  "name": "netsweep",
+  "productName": "NetSweep",
+  "version": "1.0.0",
+  "description": "NetSweep — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
+  "author": {
+    "name": "TrendlinePros",
+    "email": "support@example.com"
+  },
+  "license": "MIT",
+  "main": "src/main/main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "lint": "node scripts/check-syntax.js",
+    "smoke": "cross-env NETSWEEP_SMOKE=1 electron . --no-sandbox",
+    "postinstall": "electron-builder install-app-deps || true",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "release": "electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-log": "^5.1.2",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.2.1"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^30.0.9",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.trendlinepros.netsweep",
+    "productName": "NetSweep",
+    "copyright": "Copyright © 2026 TrendlinePros",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "data/**/*",
+      "!**/*.map",
+      "!**/{.eslintrc,.editorconfig,.gitignore}"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": ["**/*"]
+      }
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "trendlinepros-afk",
+        "repo": "ip-scanner",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NetSweep",
+      "uninstallDisplayName": "NetSweep ${version}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "build/icon.png",
+      "category": "Network",
+      "maintainer": "TrendlinePros"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+# Used by electron-updater ONLY when running a dev/unpacked build so you can
+# exercise the update code path without a full install. The real app-update.yml
+# is generated automatically by electron-builder from the `publish` config in
+# package.json and embedded in the packaged app.
+provider: github
+owner: trendlinepros-afk
+repo: ip-scanner

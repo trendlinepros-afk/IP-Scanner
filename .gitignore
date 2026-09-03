@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+release/
+dist/
+out/
+
+# Downloaded full OUI database (optional, large — see resources/README)
+resources/oui-full.txt
+resources/oui-full.json
+data/oui-full.json
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Env
+.env
+.env.local

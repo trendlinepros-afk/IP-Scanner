@@ -1,0 +1,185 @@
+# NetSweep
+
+**A fast, open network / IP scanner — an Advanced IP Scanner alternative.**
+
+NetSweep discovers every device on your LAN in seconds and shows you its status,
+name, IP, MAC address, manufacturer and shared resources — then lets you jump
+straight into Remote Desktop, SSH, file shares, Wake-on-LAN and more. It ships
+as a Windows **installer *and* a portable executable**, and the installed
+version can **check for, download and install its own updates**.
+
+> Built with Electron. Cross-platform code (Windows / macOS / Linux); the
+> primary distributable target is Windows, like the original.
+
+---
+
+## Features
+
+Everything you'd expect from Advanced IP Scanner:
+
+| Capability | Details |
+|---|---|
+| **Fast host discovery** | Multithreaded sweep of a range (`192.168.1.1-254`), CIDR (`10.0.0.0/24`), single IPs or comma-separated combinations. ICMP ping with an automatic **TCP fallback** for hosts that block ping. |
+| **Device details** | Status (alive/dead), reverse-DNS / NetBIOS **name**, **IP**, **MAC address**, **manufacturer** (OUI lookup), response time. |
+| **Shared resources** | Detects HTTP, HTTPS, FTP and Windows **file shares**; one click opens them in Explorer / your browser. |
+| **Open ports / services** | Configurable port scan with friendly service names (RDP, SMB, SSH, VNC, …). |
+| **Remote tools** | Right-click a host for **RDP**, **SSH**, **Telnet**, **Ping**, **Traceroute**, **NSLookup**, open shares, open web UI, remote shutdown. |
+| **Wake-on-LAN** | Send a magic packet to wake sleeping machines by MAC. |
+| **Favorites** | Star hosts to keep track of them across scans. |
+| **Export** | Save results to **CSV, HTML, XML or JSON**. |
+| **Live UI** | Sortable/filterable results grid, details drawer with an embedded tool console, light/dark/system themes. |
+| **Auto-update** | Built-in **Check for Updates** → downloads in the background → **Restart & Install / Later** prompt (installed build only). |
+
+---
+
+## Two ways to run it
+
+electron-builder produces both from one codebase:
+
+1. **Installer** — `NetSweep-Setup-<version>.exe` (NSIS). Lets the user pick the
+   install folder, adds Start-menu / desktop shortcuts and an uninstaller. The
+   installed app has **auto-update enabled**.
+2. **Portable** — `NetSweep-Portable-<version>.exe`. A single file you can run
+   from anywhere (a USB stick, say) with no installation. Auto-update is
+   intentionally disabled here; the app shows a note directing you to the
+   installed version.
+
+---
+
+## How the "Check for Updates" flow works
+
+The installed application updates itself from **GitHub Releases** via
+[`electron-updater`](https://www.electron.build/auto-update):
+
+1. Click the **⭯ Check for updates** button (toolbar) or **Tools → Check for
+   Updates…**.
+2. NetSweep queries the latest GitHub Release for this repo.
+3. If a newer version exists it downloads in the background with a live
+   progress bar.
+4. When the download finishes you get a dialog:
+   **"Restart & Install"** or **"Later"**.
+   - *Restart & Install* quits, runs the update and relaunches.
+   - *Later* keeps the downloaded update; it installs on the next quit.
+
+There's also an optional silent check at startup (toggle in **Settings**).
+
+To ship an update you just publish a new release (see below) — every installed
+client picks it up.
+
+---
+
+## Development
+
+```bash
+npm install          # install dependencies
+npm run dev          # launch NetSweep with dev tools
+npm run lint         # byte-compile all JS + validate JSON assets
+```
+
+The scanning engine is plain Node (no native modules), so it also runs in dev
+on Linux/macOS — handy for hacking on the UI. Some OS-integration tools
+(RDP via `mstsc`, `net view` share enumeration, remote shutdown, NetBIOS names)
+are Windows-only and degrade gracefully elsewhere.
+
+### Project layout
+
+```
+src/
+  main/         Electron main process + scanning engine
+    main.js       window, menu, IPC wiring, lifecycle
+    scanner.js    scan orchestrator (events: start/progress/host/done)
+    network.js    interface discovery + IPv4 range/CIDR math
+    ping.js       ICMP + TCP host liveness
+    arp.js        ARP cache → MAC addresses
+    oui.js        MAC → manufacturer lookup
+    resolve.js    reverse-DNS / NetBIOS host names
+    ports.js      TCP port scan + share/service detection
+    wol.js        Wake-on-LAN magic packets
+    tools.js      RDP/SSH/Telnet/ping/tracert/browser launchers
+    export.js     CSV / HTML / XML / JSON exporters
+    store.js      settings, favorites, last range (persisted)
+    updater.js    electron-updater integration + install dialog
+  preload/
+    preload.js    secure contextBridge API (no Node in the renderer)
+  renderer/
+    index.html    UI markup
+    styles.css    theme-aware styling
+    renderer.js   UI logic (grid, context menu, drawer, modals)
+data/oui.json     curated MAC vendor prefixes
+build/            app icons (generated by scripts/generate-icons.js)
+scripts/          icon generator + syntax checker
+```
+
+---
+
+## Building installers
+
+Icons are generated on the fly, then electron-builder packages the app.
+
+```bash
+node scripts/generate-icons.js   # (re)create build/icon.* — already committed
+
+# Build for the current OS:
+npm run dist
+
+# Windows installer + portable explicitly:
+npm run dist:win     # → release/NetSweep-Setup-<v>.exe  and  -Portable-<v>.exe
+
+# macOS / Linux:
+npm run dist:mac
+npm run dist:linux
+```
+
+Output lands in `release/`. Build each OS's artifacts on that OS (or via the
+included GitHub Actions workflow) — electron-builder does not cross-compile
+Windows installers from Linux reliably.
+
+---
+
+## Publishing a release (enables auto-update)
+
+Auto-update reads from GitHub Releases, so publishing is how clients get
+updates.
+
+**Automated (recommended)** — the workflow in
+[`.github/workflows/release.yml`](.github/workflows/release.yml) builds on
+Windows, macOS and Linux and publishes to the matching Release whenever you
+push a version tag:
+
+```bash
+npm version patch        # bumps package.json + creates a git tag
+git push --follow-tags   # triggers the release workflow
+```
+
+**Manual** — set a GitHub token and run the publish script locally:
+
+```bash
+export GH_TOKEN=<a token with repo scope>
+npm run release          # electron-builder builds and uploads to the Release
+```
+
+Either way, bump the version in `package.json` for each release — clients
+compare against it.
+
+---
+
+## MAC vendor database
+
+A curated prefix list is bundled. For exhaustive coverage, drop the full IEEE
+registry into `resources/` — see [`resources/README.md`](resources/README.md).
+It's loaded automatically when present.
+
+---
+
+## Security notes
+
+- The renderer runs with `contextIsolation` on and **no Node integration**; all
+  privileged actions go through a whitelisted IPC bridge.
+- A strict Content-Security-Policy is applied to the UI.
+- Only scan networks you are authorized to scan.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 TrendlinePros. Not affiliated with Advanced IP Scanner.
