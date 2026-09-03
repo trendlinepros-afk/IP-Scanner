@@ -129,7 +129,7 @@ class UpdateManager {
       defaultId: 0,
       cancelId: 1,
       title: 'Update ready',
-      message: `NetSweep ${version} has been downloaded.`,
+      message: `IP Scanner ${version} has been downloaded.`,
       detail: 'Would you like to restart and install it now, or later?',
       noLink: true,
     });

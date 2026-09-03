@@ -79,7 +79,7 @@ function toHtml(hosts, meta = {}) {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>NetSweep scan — ${xmlEscape(meta.range || '')}</title>
+<title>IP Scanner scan — ${xmlEscape(meta.range || '')}</title>
 <style>
   body { font-family: "Segoe UI", Roboto, Arial, sans-serif; margin: 24px; color: #1f2430; }
   h1 { font-size: 18px; }
@@ -94,7 +94,7 @@ function toHtml(hosts, meta = {}) {
 </style>
 </head>
 <body>
-  <h1>NetSweep scan results</h1>
+  <h1>IP Scanner scan results</h1>
   <div class="meta">Range: ${xmlEscape(meta.range || '—')} &nbsp;·&nbsp; ${hosts.length} host(s) &nbsp;·&nbsp; ${xmlEscape(new Date().toLocaleString())}</div>
   <table>
     <thead><tr>${head}</tr></thead>

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * NetSweep — Electron main process.
+ * IP Scanner — Electron main process.
  * Owns the application window, native menu, IPC surface and the auto-updater.
  */
 
@@ -40,7 +40,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 560,
     backgroundColor: '#1e2430',
-    title: 'NetSweep',
+    title: 'IP Scanner',
     icon: resolveIcon(),
     show: false,
     webPreferences: {
@@ -61,8 +61,8 @@ function createWindow() {
 
   // Headless smoke test (used by CI / `npm run smoke`): boot the full UI, fail
   // on any renderer/preload error, then exit. Enabled only via env var.
-  if (process.env.NETSWEEP_SMOKE) wireSmokeTest();
-  if (process.env.NETSWEEP_SHOT) wireScreenshot(process.env.NETSWEEP_SHOT);
+  if (process.env.IPSCANNER_SMOKE) wireSmokeTest();
+  if (process.env.IPSCANNER_SHOT) wireScreenshot(process.env.IPSCANNER_SHOT);
 
   // Open external links in the OS browser, never in-app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -94,7 +94,7 @@ function wireSmokeTest() {
     setTimeout(() => {
       // Ask the renderer whether it booted (table exists, appInfo resolved).
       wc.executeJavaScript(
-        "(function(){try{return !!document.getElementById('table') && !!window.netsweep && document.getElementById('appVersion').textContent;}catch(e){return 'ERR:'+e.message;}})()",
+        "(function(){try{return !!document.getElementById('table') && !!window.ipScanner && document.getElementById('appVersion').textContent;}catch(e){return 'ERR:'+e.message;}})()",
       ).then((res) => {
         if (typeof res === 'string' && res.startsWith('ERR:')) fail(res);
         // eslint-disable-next-line no-console
@@ -225,7 +225,7 @@ function buildMenu() {
           label: 'Project on GitHub',
           click: () => shell.openExternal('https://github.com/trendlinepros-afk/ip-scanner'),
         },
-        { label: 'About NetSweep', click: () => send('menu:about') },
+        { label: 'About IP Scanner', click: () => send('menu:about') },
       ],
     },
   ];
@@ -243,7 +243,7 @@ function registerIpc() {
   // --- Environment / interfaces ---
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
-    name: 'NetSweep',
+    name: 'IP Scanner',
     platform: process.platform,
     isPortable,
     isDev,
@@ -330,7 +330,7 @@ function registerIpc() {
     const { content, ext } = exporter.render(format, hosts, meta);
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: 'Export scan results',
-      defaultPath: `netsweep-scan.${ext}`,
+      defaultPath: `ip-scanner-scan.${ext}`,
       filters: [
         { name: format.toUpperCase(), extensions: [ext] },
         { name: 'All Files', extensions: ['*'] },

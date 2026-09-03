@@ -1,8 +1,8 @@
-# NetSweep
+# IP Scanner
 
 **A fast, open network / IP scanner — an Advanced IP Scanner alternative.**
 
-NetSweep discovers every device on your LAN in seconds and shows you its status,
+IP Scanner discovers every device on your LAN in seconds and shows you its status,
 name, IP, MAC address, manufacturer and shared resources — then lets you jump
 straight into Remote Desktop, SSH, file shares, Wake-on-LAN and more. It ships
 as a Windows **installer *and* a portable executable**, and the installed
@@ -36,10 +36,10 @@ Everything you'd expect from Advanced IP Scanner:
 
 electron-builder produces both from one codebase:
 
-1. **Installer** — `NetSweep-Setup-<version>.exe` (NSIS). Lets the user pick the
+1. **Installer** — `IP Scanner-Setup-<version>.exe` (NSIS). Lets the user pick the
    install folder, adds Start-menu / desktop shortcuts and an uninstaller. The
    installed app has **auto-update enabled**.
-2. **Portable** — `NetSweep-Portable-<version>.exe`. A single file you can run
+2. **Portable** — `IP Scanner-Portable-<version>.exe`. A single file you can run
    from anywhere (a USB stick, say) with no installation. Auto-update is
    intentionally disabled here; the app shows a note directing you to the
    installed version.
@@ -53,7 +53,7 @@ The installed application updates itself from **GitHub Releases** via
 
 1. Click the **⭯ Check for updates** button (toolbar) or **Tools → Check for
    Updates…**.
-2. NetSweep queries the latest GitHub Release for this repo.
+2. IP Scanner queries the latest GitHub Release for this repo.
 3. If a newer version exists it downloads in the background with a live
    progress bar.
 4. When the download finishes you get a dialog:
@@ -72,7 +72,7 @@ client picks it up.
 
 ```bash
 npm install          # install dependencies
-npm run dev          # launch NetSweep with dev tools
+npm run dev          # launch IP Scanner with dev tools
 npm run lint         # byte-compile all JS + validate JSON assets
 ```
 
@@ -123,7 +123,7 @@ node scripts/generate-icons.js   # (re)create build/icon.* — already committed
 npm run dist
 
 # Windows installer + portable explicitly:
-npm run dist:win     # → release/NetSweep-Setup-<v>.exe  and  -Portable-<v>.exe
+npm run dist:win     # → release/IP Scanner-Setup-<v>.exe  and  -Portable-<v>.exe
 
 # macOS / Linux:
 npm run dist:mac

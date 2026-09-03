@@ -31,7 +31,7 @@ function init(app) {
   try {
     // eslint-disable-next-line global-require
     const Store = require('electron-store');
-    const store = new Store({ name: 'netsweep-config', defaults: DEFAULTS });
+    const store = new Store({ name: 'ip-scanner-config', defaults: DEFAULTS });
     backing = {
       get: (k) => store.get(k),
       set: (k, v) => store.set(k, v),
@@ -41,7 +41,7 @@ function init(app) {
   } catch (_) {
     // Fallback: JSON file in userData.
     const dir = app && app.getPath ? app.getPath('userData') : process.cwd();
-    const file = path.join(dir, 'netsweep-config.json');
+    const file = path.join(dir, 'ip-scanner-config.json');
     let data = { ...DEFAULTS };
     try {
       data = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(file, 'utf8')) };

@@ -1,8 +1,8 @@
 {
-  "name": "netsweep",
-  "productName": "NetSweep",
+  "name": "ip-scanner",
+  "productName": "IP Scanner",
   "version": "1.0.0",
-  "description": "NetSweep — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
+  "description": "IP Scanner — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
   "author": {
     "name": "TrendlinePros",
     "email": "support@example.com"
@@ -14,7 +14,7 @@
     "start": "electron .",
     "dev": "cross-env NODE_ENV=development electron .",
     "lint": "node scripts/check-syntax.js",
-    "smoke": "cross-env NETSWEEP_SMOKE=1 electron . --no-sandbox",
+    "smoke": "cross-env IPSCANNER_SMOKE=1 electron . --no-sandbox",
     "postinstall": "electron-builder install-app-deps || true",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
@@ -34,8 +34,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.trendlinepros.netsweep",
-    "productName": "NetSweep",
+    "appId": "com.trendlinepros.ipscanner",
+    "productName": "IP Scanner",
     "copyright": "Copyright © 2026 TrendlinePros",
     "asar": true,
     "files": [
@@ -69,11 +69,11 @@
         { "target": "portable", "arch": ["x64"] }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "IP-Scanner-Setup-${version}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "portable": {
-      "artifactName": "${productName}-Portable-${version}.${ext}"
+      "artifactName": "IP-Scanner-Portable-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -82,8 +82,8 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "NetSweep",
-      "uninstallDisplayName": "NetSweep ${version}",
+      "shortcutName": "IP Scanner",
+      "uninstallDisplayName": "IP Scanner ${version}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false
@@ -91,11 +91,13 @@
     "mac": {
       "target": ["dmg", "zip"],
       "icon": "build/icon.png",
+      "artifactName": "IP-Scanner-${version}-${arch}.${ext}",
       "category": "public.app-category.utilities"
     },
     "linux": {
       "target": ["AppImage", "deb"],
       "icon": "build/icon.png",
+      "artifactName": "IP-Scanner-${version}.${ext}",
       "category": "Network",
       "maintainer": "TrendlinePros"
     }

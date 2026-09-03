@@ -1,9 +1,9 @@
 # Optional: full MAC vendor (OUI) database
 
-NetSweep ships with a curated set of common vendor prefixes in
+IP Scanner ships with a curated set of common vendor prefixes in
 [`../data/oui.json`](../data/oui.json), which covers most consumer and
 enterprise hardware you'll meet on a LAN. For exhaustive coverage you can drop
-the full IEEE registry here and NetSweep will load it automatically on top of
+the full IEEE registry here and IP Scanner will load it automatically on top of
 the curated set.
 
 Either format works:

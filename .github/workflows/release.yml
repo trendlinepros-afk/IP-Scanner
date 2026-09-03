@@ -1,8 +1,9 @@
 name: Build & Release
 
 # Publishes installers to a GitHub Release. Because electron-updater reads from
-# GitHub Releases, pushing a version tag here is what makes the in-app
-# "Check for updates" button find and download a new version.
+# GitHub Releases, pushing a version tag here (or dispatching this workflow) is
+# what makes the in-app "Check for updates" button find and download a new
+# version.
 
 on:
   push:
@@ -14,7 +15,31 @@ permissions:
   contents: write
 
 jobs:
+  # Remove any pre-existing release/tag for the current version so the rebuild
+  # is clean (no stale assets left behind from an earlier build). Runs once,
+  # before the build matrix. Safe when nothing exists yet.
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Delete existing release & tag for this version (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          echo "Cleaning any existing release/tag $TAG"
+          gh release delete "$TAG" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || echo "No release to delete"
+          # Best-effort tag ref removal in case the tag lingered without a release.
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" || echo "No tag ref to delete"
+
   build:
+    needs: cleanup
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
@@ -40,22 +65,9 @@ jobs:
       - name: Generate icons
         run: node scripts/generate-icons.js
 
-      # electron-builder publishes to the GitHub Release matching the tag.
+      # electron-builder publishes to the GitHub Release matching the version.
       # GH_TOKEN is provided automatically to the workflow.
-      - name: Build & publish (Windows)
-        if: matrix.os == 'windows-latest'
-        run: npm run release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & publish (macOS)
-        if: matrix.os == 'macos-latest'
-        run: npm run release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & publish (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build & publish
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

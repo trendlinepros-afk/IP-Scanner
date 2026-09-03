@@ -2,8 +2,8 @@
 
 /* global window, document */
 
-// NetSweep renderer. All privileged work goes through window.netsweep (preload).
-const api = window.netsweep;
+// IP Scanner renderer. All privileged work goes through window.ipScanner (preload).
+const api = window.ipScanner;
 
 // ---- State ---------------------------------------------------------------
 const state = {
@@ -601,7 +601,7 @@ function closeAllModals() {
 function showAbout() {
   const i = state.info || {};
   $('aboutBody').innerHTML = `
-    <p><strong>NetSweep</strong> v${escapeHtml(i.version || '?')}</p>
+    <p><strong>IP Scanner</strong> v${escapeHtml(i.version || '?')}</p>
     <p class="muted">An open network / IP scanner — Advanced IP Scanner alternative.</p>
     <dl class="kv">
       <dt>Platform</dt><dd>${escapeHtml(i.platform || '')}</dd>
@@ -618,7 +618,7 @@ function showAbout() {
 async function boot() {
   state.info = await api.appInfo();
   state.settings = await api.getSettings();
-  $('appVersion').textContent = `NetSweep v${state.info.version}${state.info.isPortable ? ' · portable' : ''}`;
+  $('appVersion').textContent = `IP Scanner v${state.info.version}${state.info.isPortable ? ' · portable' : ''}`;
   await api.setTheme(state.settings.theme || 'system');
 
   const favs = await api.getFavorites();

@@ -70,4 +70,4 @@ const api = {
   },
 };
 
-contextBridge.exposeInMainWorld('netsweep', api);
+contextBridge.exposeInMainWorld('ipScanner', api);
