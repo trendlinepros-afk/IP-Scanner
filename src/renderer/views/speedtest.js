@@ -93,6 +93,12 @@
         q('.st-ping').textContent = r.ping != null ? r.ping.toFixed(1) : '—'; q('.st-jitter').textContent = r.jitter != null ? r.jitter.toFixed(1) : '—'; q('.st-loss').textContent = `${r.loss}%`;
         q('.st-server').textContent = r.server ? `Server: ${r.server}` : '';
         NT.toast(`↓ ${NT.fmt.mbps(r.downloadMbps)}  ↑ ${NT.fmt.mbps(r.uploadMbps)}  ${r.ping} ms`, 'ok', 4000);
+        NT.saveResult({
+          type: 'speedtest',
+          title: 'Internet Speed Test',
+          summary: `↓ ${NT.fmt.mbps(r.downloadMbps)} · ↑ ${NT.fmt.mbps(r.uploadMbps)} · ${r.ping} ms`,
+          data: { downloadMbps: r.downloadMbps, uploadMbps: r.uploadMbps, ping: r.ping, jitter: r.jitter, loss: r.loss, server: r.server, connection: q('.st-conn-label').textContent },
+        });
       }
     });
     api.on('speed:error', (p) => { done(); q('.st-phase').textContent = 'Error'; NT.toast(p.message || 'Speed test failed', 'err', 5000); });

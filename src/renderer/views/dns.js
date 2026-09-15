@@ -50,7 +50,11 @@
   function wire() {
     if (s.wired) return; s.wired = true;
     api.on('dns:resolverDone', (r) => { s.rows.set(r.ip, r); render(); });
-    api.on('dns:result', (all) => { all.forEach((r) => s.rows.set(r.ip, r)); render(); s.running = false; q('.dn-go').classList.remove('scanning'); q('.dn-go-label').textContent = 'Run benchmark'; const best = all.find((r) => r.avg != null); q('.dn-summary').textContent = best ? `Fastest: ${best.name} (${best.avg} ms avg)` : 'No resolver responded.'; });
+    api.on('dns:result', (all) => {
+      all.forEach((r) => s.rows.set(r.ip, r)); render(); s.running = false; q('.dn-go').classList.remove('scanning'); q('.dn-go-label').textContent = 'Run benchmark';
+      const best = all.find((r) => r.avg != null); q('.dn-summary').textContent = best ? `Fastest: ${best.name} (${best.avg} ms avg)` : 'No resolver responded.';
+      NT.saveResult({ type: 'dns', title: 'DNS Benchmark', summary: best ? `Fastest: ${best.name} (${best.avg} ms)` : 'No response', data: { resolvers: all } });
+    });
     api.on('dns:error', (p) => { s.running = false; q('.dn-go').classList.remove('scanning'); q('.dn-go-label').textContent = 'Run benchmark'; NT.toast(p.message || 'DNS benchmark failed', 'err'); });
   }
 

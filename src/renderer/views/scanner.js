@@ -212,7 +212,15 @@
     api.on('scan:phase', (p) => { if (p.phase === 'enrich') q('.sc-summary').textContent = `Resolving ${p.count} hosts…`; });
     api.on('scan:enrichProgress', (p) => { q('.sc-progresstext').textContent = `Details ${p.done}/${p.total}`; });
     api.on('scan:host', (h) => { s.hosts.set(h.ip, h); render(); if (s.selectedIp === h.ip) drawer(h); });
-    api.on('scan:done', (p) => { setScanning(false); q('.sc-progress').classList.add('hidden'); const secs = (p.elapsedMs / 1000).toFixed(1); q('.sc-elapsed').textContent = `${secs}s`; q('.sc-summary').textContent = p.cancelled ? `Stopped · ${p.alive} alive` : `Done · ${p.alive} of ${p.total} alive in ${secs}s`; NT.toast(p.cancelled ? 'Scan stopped' : `Scan complete — ${p.alive} alive`, p.cancelled ? '' : 'ok'); });
+    api.on('scan:done', (p) => {
+      setScanning(false); q('.sc-progress').classList.add('hidden'); const secs = (p.elapsedMs / 1000).toFixed(1); q('.sc-elapsed').textContent = `${secs}s`;
+      q('.sc-summary').textContent = p.cancelled ? `Stopped · ${p.alive} alive` : `Done · ${p.alive} of ${p.total} alive in ${secs}s`;
+      NT.toast(p.cancelled ? 'Scan stopped' : `Scan complete — ${p.alive} alive`, p.cancelled ? '' : 'ok');
+      if (!p.cancelled) {
+        const hosts = Array.from(s.hosts.values()).filter((h) => h.status === 'alive').map((h) => ({ ip: h.ip, name: h.name, mac: h.mac, vendor: h.vendor }));
+        NT.saveResult({ type: 'scan', title: 'Network Scan', summary: `${s.lastRange} · ${p.alive} of ${p.total} alive`, data: { range: s.lastRange, alive: p.alive, total: p.total, hosts } });
+      }
+    });
     api.on('scan:error', (p) => { setScanning(false); q('.sc-progress').classList.add('hidden'); NT.toast(p.message || 'Scan error', 'err'); q('.sc-summary').textContent = 'Error'; });
     api.on('menu:toggle-scan', () => { if (NT.state.view === 'scanner') startScan(); });
     api.on('menu:export', () => { if (NT.state.view === 'scanner') NT.$('exportModal').classList.remove('hidden'); });

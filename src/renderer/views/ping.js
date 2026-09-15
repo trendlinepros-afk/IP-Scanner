@@ -5,7 +5,7 @@
 // Ping / Latency Monitor view — continuous ping with live graph (PingPlotter style).
 (function pingView() {
   const api = NT.api;
-  const s = { root: null, running: false, chart: null, wired: false };
+  const s = { root: null, running: false, chart: null, wired: false, lastStats: null, target: '' };
   const q = (sel) => s.root.querySelector(sel);
 
   function html() {
@@ -35,9 +35,16 @@
 
   function setRunning(on) { s.running = on; q('.pm-go').classList.toggle('scanning', on); q('.pm-go-label').textContent = on ? 'Stop' : 'Start'; q('.pm-go').querySelector('.btn-icon').textContent = on ? '■' : '▶'; }
 
+  function saveSnapshot() {
+    if (s.lastStats && s.lastStats.sent > 0) {
+      NT.saveResult({ type: 'ping', title: 'Ping Monitor', summary: `${s.target} · avg ${s.lastStats.avg ?? '—'} ms · ${s.lastStats.lossPct}% loss`, data: { target: s.target, ...s.lastStats } });
+    }
+  }
+
   function start() {
-    if (s.running) { api.stopLatency(); setRunning(false); return; }
+    if (s.running) { api.stopLatency(); setRunning(false); saveSnapshot(); return; }
     const target = q('.pm-target').value.trim(); if (!target) { NT.toast('Enter a host or IP', 'err'); return; }
+    s.target = target; s.lastStats = null;
     s.chart.clear(); q('.pm-log').textContent = '';
     ['pm-last', 'pm-min', 'pm-avg', 'pm-max', 'pm-jitter', 'pm-loss'].forEach((c) => { q(`.${c}`).textContent = '—'; });
     q('.pm-count').textContent = '0/0';
@@ -53,6 +60,7 @@
       const log = q('.pm-log'); log.textContent += `${line}\n`; if (log.textContent.length > 20000) log.textContent = log.textContent.slice(-15000); log.scrollTop = log.scrollHeight;
     });
     api.on('latency:stats', (st) => {
+      s.lastStats = st;
       q('.pm-last').textContent = st.last ?? '—'; q('.pm-min').textContent = st.min ?? '—'; q('.pm-avg').textContent = st.avg ?? '—';
       q('.pm-max').textContent = st.max ?? '—'; q('.pm-jitter').textContent = st.jitter ?? '—'; q('.pm-loss').textContent = `${st.lossPct}%`;
       q('.pm-count').textContent = `${st.recv}/${st.sent}`;

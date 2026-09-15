@@ -36,6 +36,33 @@ NetBIOS names) are platform-specific and degrade gracefully where unavailable.
 
 ---
 
+## Clients & PDF reports
+
+The app opens to a **Clients** screen — create and manage a client for each
+site or customer. Pick a client and every diagnostic you run is **saved to that
+client**, timestamped, under your Documents folder:
+
+```
+<Documents>/IP Scanner/Clients/<Client Name>/
+    client.json      # client details
+    history.json     # every saved test, with the date/time it ran
+    reports/         # generated PDF reports
+```
+
+From a client's dashboard:
+
+- **🕑 History** — every recorded test with its date/time; delete individual
+  runs or clear all.
+- **📄 Generate PDF Report** — a clean, **printable PDF** grouping all tests by
+  type, each run stamped with when it ran. Speed tests (and LAN, ping, DNS,
+  traceroute, WiFi, port and network scans) are laid out in tables so you can
+  see trends over time. The PDF is saved under the client's `reports/` folder
+  and opened automatically (print from your PDF viewer). Reports are rendered
+  with Electron's built-in `printToPDF` — no external tools required.
+- **📁** opens the client's folder; **✎** edits client details.
+
+---
+
 ## Two ways to run it
 
 electron-builder produces both from one codebase:

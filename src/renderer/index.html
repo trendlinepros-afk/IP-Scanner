@@ -21,8 +21,38 @@
       <button id="updateBtn" class="btn icon-btn" title="Check for updates">⭯</button>
     </header>
 
-    <!-- Home / launcher -->
+    <!-- Clients landing (opens first) -->
+    <section id="view-clients" class="view view-clients">
+      <div class="clients-head">
+        <span class="hero-logo small" aria-hidden="true">◎</span>
+        <div class="clients-head-text">
+          <h1>Clients</h1>
+          <p class="muted">Select a client to run diagnostics, or create a new one. Results save to Documents.</p>
+        </div>
+        <div class="spacer"></div>
+        <input id="clientSearch" class="filter-input" spellcheck="false" placeholder="Search clients…" />
+        <button id="newClientBtn" class="btn btn-primary">+ New Client</button>
+        <button id="clientsSettingsBtn" class="btn icon-btn" title="Settings">⚙</button>
+      </div>
+      <div class="clients-grid" id="clientsGrid"></div>
+      <div class="empty-state clients-empty hidden" id="clientsEmpty">
+        <div class="empty-icon">📁</div>
+        <p>No clients yet.</p><p class="empty-hint">Click <strong>+ New Client</strong> to get started.</p>
+      </div>
+      <footer class="home-footer"><span id="clientsPath" class="muted"></span><div class="spacer"></div><span id="appVersion2" class="muted"></span></footer>
+    </section>
+
+    <!-- Home / per-client tools dashboard -->
     <section id="view-home" class="view view-home">
+      <div class="client-bar" id="clientBar">
+        <button class="btn ghost" id="toClientsBtn">‹ Clients</button>
+        <div class="client-bar-name" id="clientBarName"></div>
+        <div class="spacer"></div>
+        <button class="btn" id="clientHistoryBtn">🕑 History</button>
+        <button class="btn btn-primary" id="clientReportBtn">📄 Generate PDF Report</button>
+        <button class="btn" id="clientFolderBtn" title="Open client folder">📁</button>
+        <button class="btn icon-btn" id="clientEditBtn" title="Edit client">✎</button>
+      </div>
       <div class="hero">
         <div class="hero-logo" aria-hidden="true">◎</div>
         <div class="hero-text">
@@ -110,6 +140,43 @@
           <button class="btn export-fmt" data-fmt="xml">XML</button>
           <button class="btn export-fmt" data-fmt="json">JSON</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client create / edit modal -->
+  <div id="clientModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="clientModalTitle">New Client</h2><button id="clientModalClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body">
+        <label class="field"><span>Client name *</span><input id="cmName" type="text" placeholder="Acme Corp" /></label>
+        <div class="field-row">
+          <label class="field"><span>Company</span><input id="cmCompany" type="text" /></label>
+          <label class="field"><span>Contact</span><input id="cmContact" type="text" /></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>Email</span><input id="cmEmail" type="text" /></label>
+          <label class="field"><span>Phone</span><input id="cmPhone" type="text" /></label>
+        </div>
+        <label class="field"><span>Site / location</span><input id="cmSite" type="text" /></label>
+        <label class="field"><span>Notes</span><textarea id="cmNotes" rows="3"></textarea></label>
+      </div>
+      <div class="modal-foot">
+        <button id="cmDelete" class="btn danger hidden">Delete</button>
+        <div class="spacer"></div>
+        <button id="cmSave" class="btn btn-primary">Create</button>
+        <button id="cmCancel" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test history modal -->
+  <div id="historyModal" class="modal hidden">
+    <div class="modal-card wide">
+      <div class="modal-head"><h2 id="historyTitle">Test history</h2><button id="historyClose" class="btn icon-btn">✕</button></div>
+      <div class="modal-body">
+        <div class="history-toolbar"><span id="historyCount" class="muted"></span><div class="spacer"></div><button id="historyReport" class="btn btn-primary">📄 PDF Report</button><button id="historyClear" class="btn danger">Clear all</button></div>
+        <div id="historyList" class="history-list"></div>
       </div>
     </div>
   </div>

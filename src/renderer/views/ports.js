@@ -54,6 +54,7 @@
         res.open.forEach((p) => { const tr = NT.el('tr'); tr.innerHTML = `<td class="col-hop">${p}</td><td><span class="dot up"></span>open</td><td>${NT.escapeHtml(svcMap[p] || '')}</td>`; tbody.append(tr); });
         q('.ps-summary').textContent = `${res.open.length} open of ${list.length} scanned on ${host}.`;
       }
+      NT.saveResult({ type: 'ports', title: 'Port Scan', summary: `${host} · ${res.open.length} open of ${list.length}`, data: { host, open: res.open.map((p) => ({ port: p, service: svcMap[p] || '' })), scanned: list.length } });
     } catch (err) { NT.toast(`Scan failed: ${err.message}`, 'err'); }
     finally { s.running = false; q('.ps-go').classList.remove('scanning'); setTimeout(() => q('.ps-progress').classList.add('hidden'), 400); }
   }

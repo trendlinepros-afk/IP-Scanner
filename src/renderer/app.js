@@ -48,10 +48,20 @@ NT.fmt = {
     return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${u[i]}`;
   },
   pct: (n) => (n == null ? '—' : `${Math.round(n)}%`),
+  date: (ts) => { if (!ts) return '—'; try { return new Date(ts).toLocaleString(); } catch (_) { return String(ts); } },
+  ago: (ts) => {
+    if (!ts) return 'never';
+    const sdiff = Math.max(0, (Date.now() - ts) / 1000);
+    if (sdiff < 60) return 'just now';
+    if (sdiff < 3600) return `${Math.floor(sdiff / 60)}m ago`;
+    if (sdiff < 86400) return `${Math.floor(sdiff / 3600)}h ago`;
+    return `${Math.floor(sdiff / 86400)}d ago`;
+  },
 };
 
 // ---- state ---------------------------------------------------------------
 NT.state = { settings: null, info: null, view: 'home' };
+NT.activeClient = null;
 NT._views = [];
 NT._built = {};
 
@@ -64,9 +74,17 @@ NT.registerView = (def) => { NT._views.push(def); };
 NT._viewById = (id) => NT._views.find((v) => v.id === id);
 
 // ---- router --------------------------------------------------------------
+NT._hideAll = () => {
+  NT.$('view-clients').classList.add('hidden');
+  NT.$('view-home').classList.add('hidden');
+  NT.$('appbar').classList.add('hidden');
+  NT._views.forEach((v) => { const s = NT.$(`view-${v.id}`); if (s) s.classList.add('hidden'); });
+};
+
 NT.showView = (id) => {
   const def = NT._viewById(id);
   if (!def) return;
+  if (!NT.activeClient) { NT.showClients(); return; }
   // Leave current
   const cur = NT._viewById(NT.state.view);
   if (cur && cur.onLeave) { try { cur.onLeave(); } catch (_) { /* */ } }
@@ -78,9 +96,7 @@ NT.showView = (id) => {
     NT._built[id] = true;
   }
 
-  // Hide all, show target
-  NT.$('view-home').classList.add('hidden');
-  NT._views.forEach((v) => { const s = NT.$(`view-${v.id}`); if (s) s.classList.add('hidden'); });
+  NT._hideAll();
   section.classList.remove('hidden');
 
   // App bar
@@ -94,12 +110,22 @@ NT.showView = (id) => {
 };
 
 NT.goHome = () => {
+  if (!NT.activeClient) { NT.showClients(); return; }
   const cur = NT._viewById(NT.state.view);
   if (cur && cur.onLeave) { try { cur.onLeave(); } catch (_) { /* */ } }
-  NT._views.forEach((v) => { const s = NT.$(`view-${v.id}`); if (s) s.classList.add('hidden'); });
-  NT.$('appbar').classList.add('hidden');
+  NT._hideAll();
   NT.$('view-home').classList.remove('hidden');
   NT.state.view = 'home';
+  window.scrollTo(0, 0);
+};
+
+NT.showClients = () => {
+  const cur = NT._viewById(NT.state.view);
+  if (cur && cur.onLeave) { try { cur.onLeave(); } catch (_) { /* */ } }
+  NT._hideAll();
+  NT.$('view-clients').classList.remove('hidden');
+  NT.state.view = 'clients';
+  NT._renderClients();
   window.scrollTo(0, 0);
 };
 
@@ -362,7 +388,145 @@ NT.showAbout = () => {
   NT.$('aboutModal').classList.remove('hidden');
 };
 
-NT._closeModals = () => ['settingsModal', 'updateModal', 'aboutModal', 'exportModal'].forEach((id) => NT.$(id).classList.add('hidden'));
+NT._closeModals = () => ['settingsModal', 'updateModal', 'aboutModal', 'exportModal', 'clientModal', 'historyModal'].forEach((id) => NT.$(id).classList.add('hidden'));
+
+// ---- Clients -------------------------------------------------------------
+NT._clients = [];
+NT._clientFilter = '';
+
+NT._renderClients = async () => {
+  if (NT._demo) {
+    NT._clients = [
+      { id: 'a', name: 'Acme Corp', company: 'Acme Corporation', testCount: 12, lastActivity: Date.now() - 3600e3 },
+      { id: 'b', name: 'Riverside Dental', company: 'Riverside Dental Group', testCount: 5, lastActivity: Date.now() - 26 * 3600e3 },
+      { id: 'c', name: 'Main St. Cafe', company: 'Main Street Cafe', testCount: 3, lastActivity: Date.now() - 3 * 86400e3 },
+      { id: 'd', name: 'Northgate Offices', company: 'Northgate Property Mgmt', testCount: 21, lastActivity: Date.now() - 90 * 60e3 },
+    ];
+  } else {
+    NT._clients = await NT.api.listClients().catch(() => []);
+  }
+  const grid = NT.$('clientsGrid'); grid.textContent = '';
+  const q = NT._clientFilter.trim().toLowerCase();
+  const list = NT._clients.filter((c) => !q || [c.name, c.company, c.contact].filter(Boolean).some((v) => v.toLowerCase().includes(q)));
+  NT.$('clientsEmpty').classList.toggle('hidden', NT._clients.length > 0);
+  for (const c of list) {
+    const card = NT.el('button', 'client-card');
+    card.innerHTML = `
+      <div class="client-avatar">${NT.escapeHtml((c.name || '?').slice(0, 1).toUpperCase())}</div>
+      <div class="client-info">
+        <div class="client-name">${NT.escapeHtml(c.name)}</div>
+        <div class="client-sub">${NT.escapeHtml(c.company || c.contact || '')}</div>
+        <div class="client-stats"><span>${c.testCount} test${c.testCount === 1 ? '' : 's'}</span><span>·</span><span>${NT.fmt.ago(c.lastActivity)}</span></div>
+      </div>
+      <div class="client-open">›</div>`;
+    card.addEventListener('click', () => NT.openClient(c.id));
+    grid.append(card);
+  }
+  if (NT._clients.length && list.length === 0) grid.innerHTML = '<p class="muted" style="padding:20px">No clients match your search.</p>';
+};
+
+NT.openClient = async (id) => {
+  const client = await NT.api.getClient(id);
+  if (!client) { NT.toast('Client not found', 'err'); NT._renderClients(); return; }
+  NT.activeClient = client;
+  NT.$('clientBarName').innerHTML = `<strong>${NT.escapeHtml(client.name)}</strong>${client.company ? ` <span class="muted">· ${NT.escapeHtml(client.company)}</span>` : ''}`;
+  NT.goHome();
+  NT.refreshNetPill();
+};
+
+// Client create / edit modal
+NT._editingClient = null;
+NT.openClientModal = (client) => {
+  NT._editingClient = client || null;
+  NT.$('clientModalTitle').textContent = client ? 'Edit Client' : 'New Client';
+  NT.$('cmSave').textContent = client ? 'Save' : 'Create';
+  NT.$('cmDelete').classList.toggle('hidden', !client);
+  NT.$('cmName').value = client ? client.name : '';
+  NT.$('cmCompany').value = client ? client.company || '' : '';
+  NT.$('cmContact').value = client ? client.contact || '' : '';
+  NT.$('cmEmail').value = client ? client.email || '' : '';
+  NT.$('cmPhone').value = client ? client.phone || '' : '';
+  NT.$('cmSite').value = client ? client.site || '' : '';
+  NT.$('cmNotes').value = client ? client.notes || '' : '';
+  NT.$('clientModal').classList.remove('hidden');
+  setTimeout(() => NT.$('cmName').focus(), 30);
+};
+NT._saveClientModal = async () => {
+  const info = {
+    name: NT.$('cmName').value.trim(),
+    company: NT.$('cmCompany').value.trim(),
+    contact: NT.$('cmContact').value.trim(),
+    email: NT.$('cmEmail').value.trim(),
+    phone: NT.$('cmPhone').value.trim(),
+    site: NT.$('cmSite').value.trim(),
+    notes: NT.$('cmNotes').value.trim(),
+  };
+  if (!info.name) { NT.toast('Client name is required', 'err'); return; }
+  NT.$('clientModal').classList.add('hidden');
+  if (NT._editingClient) {
+    const updated = await NT.api.updateClient(NT._editingClient.id, info);
+    if (NT.activeClient && NT.activeClient.id === updated.id) { NT.activeClient = updated; NT.$('clientBarName').innerHTML = `<strong>${NT.escapeHtml(updated.name)}</strong>${updated.company ? ` <span class="muted">· ${NT.escapeHtml(updated.company)}</span>` : ''}`; }
+    NT.toast('Client updated', 'ok');
+    if (NT.state.view === 'clients') NT._renderClients();
+  } else {
+    const created = await NT.api.createClient(info);
+    NT.toast(`Client "${created.name}" created`, 'ok');
+    NT.openClient(created.id);
+  }
+};
+NT._deleteClientModal = async () => {
+  if (!NT._editingClient) return;
+  const c = NT._editingClient;
+  if (!window.confirm(`Delete client "${c.name}" and all of its saved test results and reports? This cannot be undone.`)) return;
+  await NT.api.deleteClient(c.id);
+  NT.$('clientModal').classList.add('hidden');
+  if (NT.activeClient && NT.activeClient.id === c.id) { NT.activeClient = null; NT.showClients(); } else NT._renderClients();
+  NT.toast('Client deleted', 'ok');
+};
+
+// ---- Result saving (called by tool views) -------------------------------
+NT.saveResult = async (record) => {
+  if (!NT.activeClient) return null;
+  try {
+    const res = await NT.api.saveResult(NT.activeClient.id, record);
+    if (res && res.ok) NT.toast('Saved to client report', 'ok', 1500);
+    return res;
+  } catch (_) { return null; }
+};
+
+// ---- History modal -------------------------------------------------------
+NT._typeIcon = { speedtest: '⚡', lanspeed: '🚀', wifi: '📶', ping: '📡', traceroute: '🧭', dns: '🧩', ports: '🔓', scan: '🖧', test: '◆' };
+NT.openHistory = async () => {
+  if (!NT.activeClient) return;
+  NT.$('historyTitle').textContent = `Test history — ${NT.activeClient.name}`;
+  NT.$('historyModal').classList.remove('hidden');
+  await NT._renderHistory();
+};
+NT._renderHistory = async () => {
+  const history = await NT.api.clientHistory(NT.activeClient.id).catch(() => []);
+  NT.$('historyCount').textContent = `${history.length} test${history.length === 1 ? '' : 's'} recorded`;
+  const list = NT.$('historyList'); list.textContent = '';
+  if (!history.length) { list.innerHTML = '<p class="muted" style="padding:16px">No tests recorded yet. Run a diagnostic and it will be saved here.</p>'; return; }
+  history.slice().reverse().forEach((r) => {
+    const row = NT.el('div', 'history-item');
+    row.innerHTML = `
+      <div class="hi-ico">${NT._typeIcon[r.type] || '◆'}</div>
+      <div class="hi-main"><div class="hi-title">${NT.escapeHtml(r.title)}</div><div class="hi-sum">${NT.escapeHtml(r.summary || '')}</div></div>
+      <div class="hi-time">${NT.escapeHtml(NT.fmt.date(r.timestamp))}</div>
+      <button class="btn tiny hi-del" title="Delete">✕</button>`;
+    row.querySelector('.hi-del').addEventListener('click', async () => { await NT.api.deleteResult(NT.activeClient.id, r.id); NT._renderHistory(); });
+    list.append(row);
+  });
+};
+
+// ---- PDF report ----------------------------------------------------------
+NT.generateReport = async () => {
+  if (!NT.activeClient) return;
+  NT.toast('Generating PDF report…');
+  const res = await NT.api.generateReport(NT.activeClient.id, true);
+  if (res.ok) NT.toast(`Report saved (${res.count} tests) and opened`, 'ok', 4000);
+  else NT.toast(`Report failed: ${res.error || 'unknown'}`, 'err', 5000);
+};
 
 // ---- init ----------------------------------------------------------------
 NT.init = async () => {
@@ -404,6 +568,31 @@ NT.init = async () => {
   NT.$('aboutClose').addEventListener('click', () => NT.$('aboutModal').classList.add('hidden'));
   NT.$('aboutOk').addEventListener('click', () => NT.$('aboutModal').classList.add('hidden'));
 
+  // Clients screen wiring
+  if (NT.$('appVersion2')) NT.$('appVersion2').textContent = `IP Scanner v${NT.state.info.version}`;
+  NT.$('newClientBtn').addEventListener('click', () => NT.openClientModal(null));
+  NT.$('clientsSettingsBtn').addEventListener('click', NT.openSettings);
+  NT.$('clientSearch').addEventListener('input', (e) => { NT._clientFilter = e.target.value; NT._renderClients(); });
+
+  // Client context bar (on the dashboard)
+  NT.$('toClientsBtn').addEventListener('click', NT.showClients);
+  NT.$('clientHistoryBtn').addEventListener('click', NT.openHistory);
+  NT.$('clientReportBtn').addEventListener('click', NT.generateReport);
+  NT.$('clientFolderBtn').addEventListener('click', () => { if (NT.activeClient) NT.api.openClientFolder(NT.activeClient.id); });
+  NT.$('clientEditBtn').addEventListener('click', () => { if (NT.activeClient) NT.openClientModal(NT.activeClient); });
+
+  // Client modal
+  NT.$('cmSave').addEventListener('click', NT._saveClientModal);
+  NT.$('cmCancel').addEventListener('click', () => NT.$('clientModal').classList.add('hidden'));
+  NT.$('clientModalClose').addEventListener('click', () => NT.$('clientModal').classList.add('hidden'));
+  NT.$('cmDelete').addEventListener('click', NT._deleteClientModal);
+  NT.$('cmName').addEventListener('keydown', (e) => { if (e.key === 'Enter') NT._saveClientModal(); });
+
+  // History modal
+  NT.$('historyClose').addEventListener('click', () => NT.$('historyModal').classList.add('hidden'));
+  NT.$('historyReport').addEventListener('click', NT.generateReport);
+  NT.$('historyClear').addEventListener('click', async () => { if (NT.activeClient && window.confirm('Clear all saved tests for this client?')) { await NT.api.clearHistory(NT.activeClient.id); NT._renderHistory(); } });
+
   // Global keys + menu events
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { NT._closeModals(); if (NT.hideCtx) NT.hideCtx(); } });
   NT.api.on('menu:home', NT.goHome);
@@ -413,11 +602,18 @@ NT.init = async () => {
 
   NT.refreshNetPill();
   setInterval(() => { if (NT.state.view === 'home') NT.refreshNetPill(); }, 30000);
+
+  // Open to the Clients screen.
+  NT.showClients();
 };
 
 // ---- demo navigation for screenshots ------------------------------------
 NT.__demoNav = (view) => {
   NT._demo = true; // suppress live auto-loads so demo data is shown
+  if (view === 'clients') { NT.activeClient = null; NT.showClients(); return; }
+  // Ensure an active client so the dashboard and tools render.
+  if (!NT.activeClient) NT.activeClient = { id: '__demo__', name: 'Acme Corp', company: 'Acme Corporation' };
+  NT.$('clientBarName').innerHTML = '<strong>Acme Corp</strong> <span class="muted">· Acme Corporation</span>';
   if (view === 'home' || !view) { NT.goHome(); return; }
   NT.showView(view);
   const def = NT._viewById(view);

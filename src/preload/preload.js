@@ -88,6 +88,22 @@ const api = {
   // Network info
   netInfo: () => ipcRenderer.invoke('netinfo:summary'),
 
+  // Clients
+  listClients: () => ipcRenderer.invoke('clients:list'),
+  createClient: (info) => ipcRenderer.invoke('clients:create', info),
+  getClient: (id) => ipcRenderer.invoke('clients:get', { id }),
+  updateClient: (id, patch) => ipcRenderer.invoke('clients:update', { id, patch }),
+  deleteClient: (id) => ipcRenderer.invoke('clients:delete', { id }),
+  openClientFolder: (id) => ipcRenderer.invoke('clients:openFolder', { id }),
+  clientHistory: (id) => ipcRenderer.invoke('clients:history', { id }),
+  saveResult: (id, record) => ipcRenderer.invoke('clients:saveResult', { id, record }),
+  deleteResult: (id, resultId) => ipcRenderer.invoke('clients:deleteResult', { id, resultId }),
+  clearHistory: (id) => ipcRenderer.invoke('clients:clearHistory', { id }),
+
+  // PDF report
+  generateReport: (id, open) => ipcRenderer.invoke('report:generate', { id, open }),
+  saveReportAs: (id) => ipcRenderer.invoke('report:saveAs', { id }),
+
   // Favorites & settings
   getSettings: () => ipcRenderer.invoke('store:getSettings'),
   setSettings: (patch) => ipcRenderer.invoke('store:setSettings', patch),

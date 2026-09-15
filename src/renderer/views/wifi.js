@@ -99,12 +99,15 @@
     q('.wf-summary').textContent = `${nets.length} network(s)`;
   }
 
-  async function scan() {
+  async function scan(save) {
     if (s.scanning) return; s.scanning = true; q('.wf-scan').classList.add('scanning'); q('.wf-summary').textContent = 'Scanning…';
     try {
       const data = await api.wifiScan();
       if (!data.supported) { q('.wf-empty-msg').innerHTML = data.error ? `WiFi scan failed: ${NT.escapeHtml(data.error)}` : 'No WiFi adapter detected, or WiFi scanning is not available on this system.'; q('.wf-empty').classList.remove('hidden'); q('.wf-tbody').textContent = ''; renderCurrent(null); q('.wf-analysis').innerHTML = ''; q('.wf-summary').textContent = 'Not available'; }
-      else render(data);
+      else {
+        render(data);
+        if (save) NT.saveResult({ type: 'wifi', title: 'WiFi Scan', summary: `${data.networks.length} networks${data.current ? ` · on ${data.current.ssid}` : ''}`, data: { current: data.current, networks: data.networks, analysis: data.analysis } });
+      }
     } catch (err) { NT.toast(`WiFi scan error: ${err.message}`, 'err'); }
     finally { s.scanning = false; q('.wf-scan').classList.remove('scanning'); }
   }
@@ -118,9 +121,9 @@
     accent: '#8e44ec',
     build(section) {
       s.root = section; section.innerHTML = html();
-      q('.wf-scan').addEventListener('click', scan);
+      q('.wf-scan').addEventListener('click', () => scan(true));
       q('.wf-auto').addEventListener('change', (e) => {
-        if (e.target.checked) { s.auto = setInterval(scan, 5000); scan(); } else if (s.auto) { clearInterval(s.auto); s.auto = null; }
+        if (e.target.checked) { s.auto = setInterval(() => scan(false), 5000); scan(false); } else if (s.auto) { clearInterval(s.auto); s.auto = null; }
       });
       section.querySelectorAll('th[data-k]').forEach((th) => th.addEventListener('click', () => {
         const k = th.dataset.k; if (s.sortKey === k) s.sortDir = s.sortDir === 'asc' ? 'desc' : 'asc'; else { s.sortKey = k; s.sortDir = k === 'signalDbm' ? 'desc' : 'asc'; }

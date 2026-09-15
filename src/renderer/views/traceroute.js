@@ -5,7 +5,7 @@
 // Traceroute view — live hop-by-hop path with per-hop latency.
 (function tracerouteView() {
   const api = NT.api;
-  const s = { root: null, running: false, wired: false, maxAvg: 1 };
+  const s = { root: null, running: false, wired: false, maxAvg: 1, hops: [], target: '' };
   const q = (sel) => s.root.querySelector(sel);
 
   function html() {
@@ -29,6 +29,7 @@
 
   function addHop(h) {
     q('.tr-empty').classList.add('hidden');
+    s.hops.push(h);
     const best = h.times.filter((t) => t != null); const bestV = best.length ? Math.min(...best) : null; const lastV = h.times.length ? h.times[h.times.length - 1] : null;
     if (h.avg && h.avg > s.maxAvg) s.maxAvg = h.avg;
     const barW = h.avg ? Math.min(100, (h.avg / s.maxAvg) * 100) : 0;
@@ -43,14 +44,17 @@
   function start() {
     if (s.running) { api.stopTrace(); setRunning(false); return; }
     const target = q('.tr-target').value.trim(); if (!target) { NT.toast('Enter a destination', 'err'); return; }
-    q('.tr-tbody').textContent = ''; s.maxAvg = 1; q('.tr-summary').textContent = `Tracing ${target}…`;
+    q('.tr-tbody').textContent = ''; s.maxAvg = 1; s.hops = []; s.target = target; q('.tr-summary').textContent = `Tracing ${target}…`;
     setRunning(true); api.startTrace(target, {});
   }
 
   function wire() {
     if (s.wired) return; s.wired = true;
     api.on('trace:hop', (h) => addHop(h));
-    api.on('trace:done', () => { setRunning(false); q('.tr-summary').textContent = `Done — ${q('.tr-tbody').children.length} hops`; });
+    api.on('trace:done', () => {
+      setRunning(false); q('.tr-summary').textContent = `Done — ${s.hops.length} hops`;
+      if (s.hops.length) NT.saveResult({ type: 'traceroute', title: 'Traceroute', summary: `${s.target} · ${s.hops.length} hops`, data: { target: s.target, hops: s.hops } });
+    });
     api.on('trace:error', (p) => { setRunning(false); NT.toast(p.message || 'Traceroute failed', 'err'); q('.tr-summary').textContent = 'Error'; });
   }
 

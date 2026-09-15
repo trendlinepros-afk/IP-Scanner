@@ -71,7 +71,11 @@
   function wire() {
     if (s.wired) return; s.wired = true;
     api.on('lan:sample', (p) => { s.gaugeTarget = p.mbps || 0; if (s.chart) s.chart.push(p.mbps || 0); });
-    api.on('lan:result', (r) => { q('.ls-result').textContent = `${r.mode}: ${NT.fmt.mbps(r.mbps)} (${NT.fmt.bytes(r.bytes)} in ${r.seconds}s)`; NT.toast(`LAN ${r.mode}: ${NT.fmt.mbps(r.mbps)}`, 'ok', 4000); });
+    api.on('lan:result', (r) => {
+      q('.ls-result').textContent = `${r.mode}: ${NT.fmt.mbps(r.mbps)} (${NT.fmt.bytes(r.bytes)} in ${r.seconds}s)`;
+      NT.toast(`LAN ${r.mode}: ${NT.fmt.mbps(r.mbps)}`, 'ok', 4000);
+      NT.saveResult({ type: 'lanspeed', title: 'LAN Speed Test', summary: `${r.mode} ${NT.fmt.mbps(r.mbps)} → ${r.host}`, data: r });
+    });
     api.on('lan:error', (p) => NT.toast(p.message || 'LAN test error', 'err', 5000));
     api.on('lan:client', (c) => { const log = q('.ls-log'); log.textContent += `▶ ${c.remote} started ${c.mode === 'D' ? 'download' : 'upload'}\n`; log.scrollTop = log.scrollHeight; });
     api.on('lan:clientDone', (c) => { const log = q('.ls-log'); log.textContent += `✔ ${c.remote} done${c.mbps ? ` — ${NT.fmt.mbps(c.mbps)}` : ''}\n`; log.scrollTop = log.scrollHeight; });

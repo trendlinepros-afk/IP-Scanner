@@ -277,6 +277,44 @@ td.num.good { color: var(--up); } td.num.ok { color: var(--ok); } td.num.bad { c
   .hero-status { margin-left: 0; width: 100%; }
 }
 
+/* ---- Clients screen ----------------------------------------------------- */
+.view-clients { display: block; padding: 0; }
+.clients-head { display: flex; align-items: center; gap: 14px; padding: 22px 30px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, var(--bg-toolbar), var(--bg-elev)); }
+.hero-logo.small { font-size: 34px; }
+.clients-head-text h1 { margin: 0; font-size: 22px; }
+.clients-head-text p { margin: 2px 0 0; }
+.clients-head .filter-input { flex: 0 1 220px; }
+.clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; padding: 22px 30px; }
+.client-card { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-elev); cursor: pointer; box-shadow: var(--shadow-sm); text-align: left; color: var(--text); font-family: var(--ui); transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
+.client-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--accent); }
+.client-avatar { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); display: grid; place-items: center; font-size: 20px; font-weight: 700; }
+.client-info { flex: 1 1 auto; min-width: 0; }
+.client-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-sub { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-stats { font-size: 11px; color: var(--text-muted); display: flex; gap: 6px; margin-top: 4px; }
+.client-open { color: var(--text-muted); font-size: 22px; }
+.clients-empty { position: static; margin: 50px auto; }
+
+/* ---- Client context bar (dashboard) ------------------------------------ */
+.client-bar { display: flex; align-items: center; gap: 10px; padding: 9px 18px; border-bottom: 1px solid var(--border); background: var(--bg-toolbar); flex-wrap: wrap; }
+.client-bar-name { font-size: 14px; }
+
+/* ---- Client modal / history modal -------------------------------------- */
+.btn.danger { border-color: var(--down); color: var(--down); }
+.btn.danger:hover { background: var(--down); color: #fff; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field textarea { padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text); font-family: var(--ui); resize: vertical; }
+.modal-card.wide { width: 660px; }
+.history-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.history-list { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow: auto; }
+.history-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.hi-ico { font-size: 18px; width: 26px; text-align: center; }
+.hi-main { flex: 1 1 auto; min-width: 0; }
+.hi-title { font-weight: 600; font-size: 13px; }
+.hi-sum { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hi-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
 /* ---- Scrollbars --------------------------------------------------------- */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 2px solid var(--bg-elev); }

@@ -27,6 +27,8 @@ const { Traceroute } = require('./traceroute');
 const { LanSpeedServer, LanSpeedClient } = require('./lanspeed');
 const { DnsBenchmark } = require('./dns');
 const netinfo = require('./netinfo');
+const clients = require('./clients');
+const report = require('./report');
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -145,6 +147,62 @@ function wireScreenshot(outPath) {
       }, 600)).catch(() => app.exit(1));
     }, 1200);
   });
+}
+
+async function runSelfTest() {
+  /* eslint-disable no-console */
+  try {
+    const c = clients.createClient({ name: `SelfTest ${Date.now()}`, company: 'QA', contact: 'Tester' });
+    clients.saveResult(c.id, { type: 'speedtest', title: 'Internet Speed Test', summary: '↓ 482 / ↑ 41.7 Mbps', data: { downloadMbps: 482, uploadMbps: 41.7, ping: 8.4, jitter: 1.2, loss: 0, server: 'cloudflare', connection: 'Ethernet' } });
+    clients.saveResult(c.id, { type: 'ping', title: 'Ping Monitor', summary: '8.8.8.8 avg 12ms', data: { target: '8.8.8.8', avg: 12, min: 11, max: 25, jitter: 1.4, lossPct: 0, sent: 21, recv: 21 } });
+    clients.saveResult(c.id, { type: 'dns', title: 'DNS Benchmark', summary: 'Fastest Cloudflare', data: { resolvers: [{ name: 'Cloudflare', ip: '1.1.1.1', avg: 8.2, min: 6, max: 14, lossPct: 0 }] } });
+    const history = clients.getHistory(c.id);
+    const html = report.buildReportHtml(c, history, { generated: Date.now() });
+    const pdf = await report.renderPdf(html);
+    const file = path.join(c.dir, 'reports', 'selftest.pdf');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, pdf);
+    const okPdf = pdf && pdf.length > 1000 && pdf.slice(0, 5).toString() === '%PDF-';
+    const list = clients.listClients();
+    const found = list.find((x) => x.id === c.id);
+    console.log('SELFTEST', JSON.stringify({ ok: !!okPdf && !!found && found.testCount === 3, pdfBytes: pdf.length, tests: found && found.testCount, dir: c.dir }));
+    clients.deleteClient(c.id); // clean up
+  } catch (err) {
+    console.error('SELFTEST_FAIL', err.message);
+  } finally {
+    app.exit(0);
+  }
+  /* eslint-enable no-console */
+}
+
+async function runSampleReport(outPath) {
+  /* eslint-disable no-console */
+  try {
+    const now = Date.now();
+    const day = 86400e3;
+    const client = { name: 'Acme Corp', company: 'Acme Corporation', contact: 'Jane Doe', email: 'jane@acme.example', phone: '(555) 010-4477', site: 'HQ — 2nd floor', notes: 'Recurring monthly network health check. Compare WiFi vs wired drops in the conference rooms.' };
+    const history = [
+      { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 6 * day, summary: '', data: { downloadMbps: 452.1, uploadMbps: 39.8, ping: 9.1, jitter: 1.6, loss: 0, server: 'speed.cloudflare.com', connection: 'Wi-Fi · HomeNet-5G (-52 dBm)' } },
+      { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 6 * day + 3600e3, summary: '', data: { downloadMbps: 934.5, uploadMbps: 41.2, ping: 6.8, jitter: 0.9, loss: 0, server: 'speed.cloudflare.com', connection: 'Ethernet' } },
+      { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 2 * day, summary: '', data: { downloadMbps: 478.0, uploadMbps: 40.1, ping: 8.7, jitter: 1.2, loss: 0, server: 'speed.cloudflare.com', connection: 'Wi-Fi · HomeNet-5G (-49 dBm)' } },
+      { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 3600e3, summary: '', data: { downloadMbps: 941.2, uploadMbps: 42.0, ping: 6.5, jitter: 0.8, loss: 0, server: 'speed.cloudflare.com', connection: 'Ethernet' } },
+      { type: 'lanspeed', title: 'LAN Speed Test', timestamp: now - 2 * day + 1200e3, summary: '', data: { mode: 'download', mbps: 942, bytes: 1.18e9, seconds: 10, host: '192.168.1.20', port: 5201 } },
+      { type: 'lanspeed', title: 'LAN Speed Test', timestamp: now - 2 * day + 1500e3, summary: '', data: { mode: 'download', mbps: 289, bytes: 3.6e8, seconds: 10, host: '192.168.1.20', port: 5201 } },
+      { type: 'ping', title: 'Ping Monitor', timestamp: now - day, summary: '', data: { target: '8.8.8.8', avg: 12.4, min: 11, max: 33, jitter: 1.8, lossPct: 0, sent: 120, recv: 120 } },
+      { type: 'wifi', title: 'WiFi Scan', timestamp: now - day + 600e3, summary: '', data: { current: { ssid: 'HomeNet-5G', band: '5 GHz', channel: 44, signalDbm: -49 }, networks: [{ ssid: 'HomeNet-5G', signalDbm: -49, band: '5 GHz', channel: 44, security: 'WPA2', bssid: 'f0:9f:c2:aa:bb:cc' }, { ssid: 'Neighbor_2.4', signalDbm: -68, band: '2.4 GHz', channel: 11, security: 'WPA2', bssid: '20:e5:2a:11:22:33' }] } },
+      { type: 'dns', title: 'DNS Benchmark', timestamp: now - 5400e3, summary: '', data: { resolvers: [{ name: 'Cloudflare', ip: '1.1.1.1', avg: 8.2, min: 6.1, max: 14, lossPct: 0 }, { name: 'Google', ip: '8.8.8.8', avg: 11.4, min: 9, max: 18, lossPct: 0 }, { name: 'System', ip: '192.168.1.1', avg: 13.9, min: 10, max: 22, lossPct: 0 }] } },
+      { type: 'traceroute', title: 'Traceroute', timestamp: now - 5000e3, summary: '', data: { target: 'cloudflare.com', hops: [{ hop: 1, host: '', ip: '192.168.1.1', avg: 1, loss: 0 }, { hop: 2, host: 'core1.isp.net', ip: '96.120.10.1', avg: 11.3, loss: 0 }, { hop: 3, host: 'cloudflare.com', ip: '104.16.132.229', avg: 12.3, loss: 0 }] } },
+    ];
+    const html = report.buildReportHtml(client, history, { generated: now });
+    const pdf = await report.renderPdf(html);
+    fs.writeFileSync(outPath, pdf);
+    console.log('SAMPLE_OK', JSON.stringify({ bytes: pdf.length, path: outPath }));
+  } catch (err) {
+    console.error('SAMPLE_FAIL', err.message);
+  } finally {
+    app.exit(0);
+  }
+  /* eslint-enable no-console */
 }
 
 function resolveIcon() {
@@ -449,6 +507,53 @@ function registerIpc() {
 
   // --- Network info ---
   ipcMain.handle('netinfo:summary', () => netinfo.summary());
+
+  // --- Clients ---
+  ipcMain.handle('clients:list', () => clients.listClients());
+  ipcMain.handle('clients:create', (_e, info) => clients.createClient(info || {}));
+  ipcMain.handle('clients:get', (_e, { id }) => clients.getClient(id));
+  ipcMain.handle('clients:update', (_e, { id, patch }) => clients.updateClient(id, patch || {}));
+  ipcMain.handle('clients:delete', (_e, { id }) => clients.deleteClient(id));
+  ipcMain.handle('clients:openFolder', (_e, { id }) => clients.openFolder(id));
+  ipcMain.handle('clients:history', (_e, { id }) => clients.getHistory(id));
+  ipcMain.handle('clients:saveResult', (_e, { id, record }) => clients.saveResult(id, record));
+  ipcMain.handle('clients:deleteResult', (_e, { id, resultId }) => clients.deleteResult(id, resultId));
+  ipcMain.handle('clients:clearHistory', (_e, { id }) => clients.clearHistory(id));
+
+  // --- PDF report ---
+  ipcMain.handle('report:generate', async (_e, { id, open }) => {
+    try {
+      const client = clients.getClient(id);
+      if (!client) return { ok: false, error: 'Client not found' };
+      const history = clients.getHistory(id);
+      const html = report.buildReportHtml(client, history, { generated: Date.now() });
+      const pdf = await report.renderPdf(html);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const file = path.join(client.dir, 'reports', `Report-${stamp}.pdf`);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, pdf);
+      if (open !== false) shell.openPath(file);
+      return { ok: true, path: file, count: history.length };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('report:saveAs', async (_e, { id }) => {
+    const client = clients.getClient(id);
+    if (!client) return { ok: false, error: 'Client not found' };
+    const history = clients.getHistory(id);
+    const html = report.buildReportHtml(client, history, { generated: Date.now() });
+    const pdf = await report.renderPdf(html);
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save report as PDF',
+      defaultPath: `${client.name} Network Report.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    fs.writeFileSync(filePath, pdf);
+    shell.openPath(filePath);
+    return { ok: true, path: filePath };
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -465,8 +570,18 @@ if (!gotLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     store.init(app);
+
+    // Headless self-test: exercise the client store + PDF report generation.
+    if (process.env.IPSCANNER_SELFTEST) {
+      await runSelfTest();
+      return;
+    }
+    if (process.env.IPSCANNER_SAMPLE_REPORT) {
+      await runSampleReport(process.env.IPSCANNER_SAMPLE_REPORT);
+      return;
+    }
 
     // Apply persisted theme.
     const settings = store.getSettings();
