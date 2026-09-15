@@ -1,34 +1,38 @@
-# IP Scanner
+# IP Scanner — Network Toolkit
 
-**A fast, open network / IP scanner — an Advanced IP Scanner alternative.**
-
-IP Scanner discovers every device on your LAN in seconds and shows you its status,
-name, IP, MAC address, manufacturer and shared resources — then lets you jump
-straight into Remote Desktop, SSH, file shares, Wake-on-LAN and more. It ships
-as a Windows **installer *and* a portable executable**, and the installed
-version can **check for, download and install its own updates**.
+**A complete, open network testing suite** — speed tests, WiFi analysis,
+latency monitoring, LAN throughput, DNS benchmarking, device discovery and more,
+behind a card-based home page. Ships as a Windows **installer *and* a portable
+executable**, and the installed version can **check for, download and install
+its own updates**.
 
 > Built with Electron. Cross-platform code (Windows / macOS / Linux); the
-> primary distributable target is Windows, like the original.
+> primary distributable target is Windows.
 
 ---
 
-## Features
+## Tools
 
-Everything you'd expect from Advanced IP Scanner:
+A launcher home page opens first; each card opens a full tool:
 
-| Capability | Details |
-|---|---|
-| **Fast host discovery** | Multithreaded sweep of a range (`192.168.1.1-254`), CIDR (`10.0.0.0/24`), single IPs or comma-separated combinations. ICMP ping with an automatic **TCP fallback** for hosts that block ping. |
-| **Device details** | Status (alive/dead), reverse-DNS / NetBIOS **name**, **IP**, **MAC address**, **manufacturer** (OUI lookup), response time. |
-| **Shared resources** | Detects HTTP, HTTPS, FTP and Windows **file shares**; one click opens them in Explorer / your browser. |
-| **Open ports / services** | Configurable port scan with friendly service names (RDP, SMB, SSH, VNC, …). |
-| **Remote tools** | Right-click a host for **RDP**, **SSH**, **Telnet**, **Ping**, **Traceroute**, **NSLookup**, open shares, open web UI, remote shutdown. |
-| **Wake-on-LAN** | Send a magic packet to wake sleeping machines by MAC. |
-| **Favorites** | Star hosts to keep track of them across scans. |
-| **Export** | Save results to **CSV, HTML, XML or JSON**. |
-| **Live UI** | Sortable/filterable results grid, details drawer with an embedded tool console, light/dark/system themes. |
-| **Auto-update** | Built-in **Check for Updates** → downloads in the background → **Restart & Install / Later** prompt (installed build only). |
+| Tool | What it does | Modeled on |
+|---|---|---|
+| **⚡ Speed Test** | Internet **download / upload / ping / jitter / loss** on a live gauge, measured against Cloudflare's global network. Labels whether you're on WiFi or Ethernet so you can compare. | Ookla / Cloudflare speed test |
+| **🚀 LAN Speed Test** | iPerf-style TCP **throughput between two machines** (multi-stream). Run the built-in server on one PC, the client on another — compare WiFi vs Ethernet on your own LAN. | iPerf3 |
+| **📶 WiFi Analyzer** | Nearby APs with **SSID, BSSID, signal (dBm), band, channel, security, PHY**, current-link quality, band breakdown and a **channel-congestion graph** with a best-channel recommendation. | inSSIDer / NetSpot |
+| **ℹ️ Network Info** | Adapters, default gateway, DNS servers, and **public IP / ISP / geo**. | — |
+| **🖧 IP Scanner** | Multithreaded LAN discovery: status, name, **IP, MAC, manufacturer (OUI)**, shared resources; right-click **RDP / SSH / Telnet / WoL / shares**; CSV/HTML/XML/JSON export. | Advanced IP Scanner |
+| **📡 Ping Monitor** | Continuous latency with a **live graph**, min/avg/max, **jitter and packet loss**. | PingPlotter / MTR |
+| **🧭 Traceroute** | Live **hop-by-hop path** with per-hop latency and loss. | traceroute / WinMTR |
+| **🧩 DNS Benchmark** | Ranks public resolvers (Cloudflare, Google, Quad9, …) **and your system DNS** by response time. | DNS Benchmark / namebench |
+| **🔓 Port Scanner** | Scan TCP ports on a host and identify running services. | nmap (connect scan) |
+
+All engines are pure Node (no native modules) and stream results live. Some
+OS-integration bits (WiFi scan, RDP, `net view` shares, remote shutdown,
+NetBIOS names) are platform-specific and degrade gracefully where unavailable.
+
+**Auto-update:** Built-in **Check for Updates** → downloads in the background →
+**Restart & Install / Later** prompt (installed build only).
 
 ---
 

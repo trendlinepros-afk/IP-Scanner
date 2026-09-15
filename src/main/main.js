@@ -20,6 +20,13 @@ const store = require('./store');
 const oui = require('./oui');
 const ports = require('./ports');
 const { UpdateManager } = require('./updater');
+const { SpeedTest } = require('./speedtest');
+const wifi = require('./wifi');
+const { LatencyMonitor } = require('./latency');
+const { Traceroute } = require('./traceroute');
+const { LanSpeedServer, LanSpeedClient } = require('./lanspeed');
+const { DnsBenchmark } = require('./dns');
+const netinfo = require('./netinfo');
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -28,6 +35,14 @@ const isPortable = !!process.env.PORTABLE_EXECUTABLE_DIR;
 let mainWindow = null;
 let scanner = null;
 let updateManager = null;
+
+// Stateful tool singletons.
+let speedTest = null;
+let latencyMonitor = null;
+let tracerouteRunner = null;
+let lanServer = null;
+let lanClient = null;
+let dnsBench = null;
 
 function getWindow() {
   return mainWindow;
@@ -92,9 +107,9 @@ function wireSmokeTest() {
   wc.on('preload-error', (_e, _p, err) => fail(`preload-error ${err.message}`));
   wc.on('did-finish-load', () => {
     setTimeout(() => {
-      // Ask the renderer whether it booted (table exists, appInfo resolved).
+      // Ask the renderer whether it booted (home cards rendered, API present).
       wc.executeJavaScript(
-        "(function(){try{return !!document.getElementById('table') && !!window.ipScanner && document.getElementById('appVersion').textContent;}catch(e){return 'ERR:'+e.message;}})()",
+        "(function(){try{var c=document.querySelectorAll('.tool-card').length;if(!window.ipScanner)return 'ERR: no api';if(c===0)return 'ERR: no cards';return 'cards='+c;}catch(e){return 'ERR:'+e.message;}})()",
       ).then((res) => {
         if (typeof res === 'string' && res.startsWith('ERR:')) fail(res);
         // eslint-disable-next-line no-console
@@ -110,39 +125,12 @@ function wireSmokeTest() {
 
 function wireScreenshot(outPath) {
   const wc = mainWindow.webContents;
-  const sample = [
-    { status: 'alive', name: 'gateway.local', ip: '192.168.1.1', mac: 'f0:9f:c2:1a:2b:3c', vendor: 'Ubiquiti Networks', responseMs: 1, shares: [{ type: 'http', label: 'HTTP' }, { type: 'https', label: 'HTTPS' }] },
-    { status: 'alive', name: 'DESKTOP-A12B', ip: '192.168.1.14', mac: 'b8:ca:3a:44:55:66', vendor: 'Dell Inc.', responseMs: 2, shares: [{ type: 'smb', label: 'File shares' }] },
-    { status: 'alive', name: 'macbook-pro', ip: '192.168.1.22', mac: 'a4:5e:60:77:88:99', vendor: 'Apple, Inc.', responseMs: 4, shares: [] },
-    { status: 'alive', name: 'raspberrypi', ip: '192.168.1.30', mac: 'b8:27:eb:aa:bb:cc', vendor: 'Raspberry Pi Foundation', responseMs: 3, shares: [{ type: 'http', label: 'HTTP' }] },
-    { status: 'alive', name: 'NAS-STORAGE', ip: '192.168.1.40', mac: '00:90:a9:12:34:56', vendor: 'Western Digital', responseMs: 2, shares: [{ type: 'smb', label: 'File shares' }, { type: 'http', label: 'HTTP' }] },
-    { status: 'alive', name: 'HP-LaserJet', ip: '192.168.1.50', mac: '3c:4a:92:de:ad:be', vendor: 'Hewlett Packard', responseMs: 6, shares: [{ type: 'http', label: 'HTTP' }] },
-    { status: 'alive', name: 'echo-dot', ip: '192.168.1.61', mac: '68:54:3d:0a:0b:0c', vendor: 'Amazon Technologies', responseMs: 8, shares: [] },
-    { status: 'alive', name: 'living-room-tv', ip: '192.168.1.72', mac: '84:25:db:11:22:33', vendor: 'Samsung Electronics', responseMs: 5, shares: [] },
-    { status: 'dead', name: '', ip: '192.168.1.99', mac: '', vendor: '', responseMs: null, shares: [] },
-  ];
+  const view = process.env.IPSCANNER_SHOT_VIEW || 'home';
   wc.on('did-finish-load', () => {
     setTimeout(() => {
-      const script = `(function(){
-        var tbody=document.getElementById('tbody'); tbody.innerHTML='';
-        var hosts=${JSON.stringify(sample)};
-        function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
-        hosts.forEach(function(h){
-          var badges=(h.shares||[]).map(function(s){return '<span class="share-badge">'+s.label+'</span>';}).join('');
-          var tr=document.createElement('tr'); if(h.status!=='alive')tr.className='dead';
-          tr.innerHTML='<td class="col-status"><span class="dot '+(h.status==='alive'?'up':'down')+'"></span>'+(h.status==='alive'?'Alive':'Dead')+'</td>'+
-            '<td>'+esc(h.name)+'</td><td>'+h.ip+'</td><td class="mac">'+h.mac+'</td><td>'+esc(h.vendor)+'</td>'+
-            '<td class="num">'+(h.responseMs==null?'':h.responseMs)+'</td><td>'+badges+'</td>';
-          tbody.appendChild(tr);
-        });
-        document.getElementById('emptyState').classList.add('hidden');
-        document.getElementById('hostCount').textContent='9 hosts';
-        document.getElementById('aliveCount').textContent='8 alive';
-        document.getElementById('statusSummary').textContent='Done · 8 of 254 alive in 3.2s';
-        document.getElementById('elapsed').textContent='3.2s';
-        var sel=document.getElementById('range'); if(sel) sel.value='192.168.1.1-254';
-        return true;
-      })()`;
+      // app.js exposes window.__demoNav(view) which navigates and injects
+      // representative demo data so screenshots look realistic.
+      const script = `(function(){try{ if(window.__demoNav){window.__demoNav(${JSON.stringify(view)});return 'ok';} return 'no-demoNav'; }catch(e){return 'ERR:'+e.message;}})()`;
       wc.executeJavaScript(script).then(() => setTimeout(async () => {
         try {
           const img = await wc.capturePage();
@@ -154,7 +142,7 @@ function wireScreenshot(outPath) {
           console.error('SHOT_FAIL', err.message);
         }
         app.exit(0);
-      }, 400)).catch(() => app.exit(1));
+      }, 600)).catch(() => app.exit(1));
     }, 1200);
   });
 }
@@ -205,6 +193,8 @@ function buildMenu() {
     {
       label: 'View',
       submenu: [
+        { label: 'Home', accelerator: 'CmdOrCtrl+H', click: () => send('menu:home') },
+        { type: 'separator' },
         { role: 'reload' }, { role: 'togglefullscreen' },
         { type: 'separator' },
         { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
@@ -348,6 +338,117 @@ function registerIpc() {
   ipcMain.handle('update:check', () => updateManager.check());
   ipcMain.handle('update:status', () => updateManager.status());
   ipcMain.handle('update:install', () => updateManager.installNow());
+
+  // --- Internet speed test ---
+  ipcMain.handle('speed:start', (_e, options) => {
+    if (speedTest && speedTest.running) return { ok: false, error: 'Speed test already running' };
+    speedTest = new SpeedTest();
+    speedTest.on('phase', (p) => send('speed:phase', p));
+    speedTest.on('sample', (p) => send('speed:sample', p));
+    speedTest.on('latency', (p) => send('speed:latency', p));
+    speedTest.on('result', (p) => send('speed:result', p));
+    speedTest.on('error', (err) => send('speed:error', { message: err.message }));
+    speedTest.run(options || {}).catch((err) => send('speed:error', { message: err.message }));
+    return { ok: true };
+  });
+  ipcMain.handle('speed:cancel', () => {
+    if (speedTest) speedTest.cancel();
+    return { ok: true };
+  });
+
+  // --- WiFi analyzer ---
+  ipcMain.handle('wifi:scan', () => wifi.scan());
+
+  // --- Latency monitor ---
+  ipcMain.handle('latency:start', (_e, { target, options }) => {
+    if (!latencyMonitor) {
+      latencyMonitor = new LatencyMonitor();
+      latencyMonitor.on('sample', (p) => send('latency:sample', p));
+      latencyMonitor.on('stats', (p) => send('latency:stats', p));
+    }
+    latencyMonitor.start(target, options || {});
+    return { ok: true };
+  });
+  ipcMain.handle('latency:stop', () => {
+    if (latencyMonitor) latencyMonitor.stop();
+    return { ok: true };
+  });
+
+  // --- Traceroute ---
+  ipcMain.handle('trace:start', (_e, { target, options }) => {
+    if (!tracerouteRunner) {
+      tracerouteRunner = new Traceroute();
+      tracerouteRunner.on('hop', (h) => send('trace:hop', h));
+      tracerouteRunner.on('done', () => send('trace:done', {}));
+      tracerouteRunner.on('error', (err) => send('trace:error', { message: err.message }));
+    }
+    tracerouteRunner.run(target, options || {});
+    return { ok: true };
+  });
+  ipcMain.handle('trace:stop', () => {
+    if (tracerouteRunner) tracerouteRunner.stop();
+    return { ok: true };
+  });
+
+  // --- LAN speed test ---
+  ipcMain.handle('lan:serverStart', async (_e, { port }) => {
+    if (!lanServer) {
+      lanServer = new LanSpeedServer();
+      lanServer.on('client', (c) => send('lan:client', c));
+      lanServer.on('clientDone', (c) => send('lan:clientDone', c));
+    }
+    try {
+      const info = await lanServer.start(port || undefined);
+      return { ok: true, info };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('lan:serverStop', () => {
+    if (lanServer) lanServer.stop();
+    return { ok: true };
+  });
+  ipcMain.handle('lan:serverInfo', () => (lanServer ? lanServer.info() : { listening: false }));
+  ipcMain.handle('lan:clientRun', async (_e, options) => {
+    lanClient = new LanSpeedClient();
+    lanClient.on('sample', (s) => send('lan:sample', s));
+    try {
+      const result = await lanClient.run(options || {});
+      send('lan:result', result);
+      return { ok: true, result };
+    } catch (err) {
+      send('lan:error', { message: err.message });
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('lan:clientCancel', () => {
+    if (lanClient) lanClient.cancel();
+    return { ok: true };
+  });
+
+  // --- DNS benchmark ---
+  ipcMain.handle('dns:start', (_e, options) => {
+    dnsBench = new DnsBenchmark();
+    dnsBench.on('resolverDone', (r) => send('dns:resolverDone', r));
+    dnsBench.on('result', (r) => send('dns:result', r));
+    dnsBench.run(options || {}).catch((err) => send('dns:error', { message: err.message }));
+    return { ok: true };
+  });
+  ipcMain.handle('dns:cancel', () => {
+    if (dnsBench) dnsBench.cancel();
+    return { ok: true };
+  });
+
+  // --- Port scanner (single host) ---
+  ipcMain.handle('ports:scan', async (_e, { ip, portList, options }) => {
+    const open = await ports.scanPorts(ip, portList && portList.length ? portList : undefined, options || {});
+    const { services } = ports.summarizeServices(open);
+    return { ip, open, services };
+  });
+  ipcMain.handle('ports:common', () => ports.COMMON_SERVICES);
+
+  // --- Network info ---
+  ipcMain.handle('netinfo:summary', () => netinfo.summary());
 }
 
 // --------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 {
   "name": "ip-scanner",
   "productName": "IP Scanner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "IP Scanner — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
   "author": {
     "name": "TrendlinePros",
@@ -48,7 +48,9 @@
       {
         "from": "resources",
         "to": "resources",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "directories": {
@@ -65,8 +67,18 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
       "artifactName": "IP-Scanner-Setup-${version}.${ext}",
@@ -89,13 +101,19 @@
       "deleteAppDataOnUninstall": false
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.png",
       "artifactName": "IP-Scanner-${version}-${arch}.${ext}",
       "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png",
       "artifactName": "IP-Scanner-${version}.${ext}",
       "category": "Network",

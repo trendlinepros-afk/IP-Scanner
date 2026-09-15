@@ -10,11 +10,24 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Whitelisted event channels the renderer may subscribe to.
 const EVENT_CHANNELS = [
+  // scanner
   'scan:start', 'scan:progress', 'scan:phase', 'scan:enrichProgress',
   'scan:host', 'scan:done', 'scan:error',
+  // speed test
+  'speed:phase', 'speed:sample', 'speed:latency', 'speed:result', 'speed:error',
+  // latency monitor
+  'latency:sample', 'latency:stats',
+  // traceroute
+  'trace:hop', 'trace:done', 'trace:error',
+  // lan speed
+  'lan:client', 'lan:clientDone', 'lan:sample', 'lan:result', 'lan:error',
+  // dns
+  'dns:resolverDone', 'dns:result', 'dns:error',
+  // updates
   'update:state',
+  // menu
   'menu:new-scan', 'menu:toggle-scan', 'menu:export', 'menu:settings',
-  'menu:check-updates', 'menu:about',
+  'menu:check-updates', 'menu:about', 'menu:home',
 ];
 
 const api = {
@@ -41,6 +54,39 @@ const api = {
   openUrl: (url) => ipcRenderer.invoke('tool:openUrl', { url }),
   shutdown: (ip) => ipcRenderer.invoke('tool:shutdown', { ip }),
   wakeOnLan: (mac, address) => ipcRenderer.invoke('tool:wol', { mac, address }),
+
+  // Internet speed test
+  startSpeedTest: (options) => ipcRenderer.invoke('speed:start', options),
+  cancelSpeedTest: () => ipcRenderer.invoke('speed:cancel'),
+
+  // WiFi analyzer
+  wifiScan: () => ipcRenderer.invoke('wifi:scan'),
+
+  // Latency monitor
+  startLatency: (target, options) => ipcRenderer.invoke('latency:start', { target, options }),
+  stopLatency: () => ipcRenderer.invoke('latency:stop'),
+
+  // Traceroute (streaming)
+  startTrace: (target, options) => ipcRenderer.invoke('trace:start', { target, options }),
+  stopTrace: () => ipcRenderer.invoke('trace:stop'),
+
+  // LAN speed test
+  lanServerStart: (port) => ipcRenderer.invoke('lan:serverStart', { port }),
+  lanServerStop: () => ipcRenderer.invoke('lan:serverStop'),
+  lanServerInfo: () => ipcRenderer.invoke('lan:serverInfo'),
+  lanClientRun: (options) => ipcRenderer.invoke('lan:clientRun', options),
+  lanClientCancel: () => ipcRenderer.invoke('lan:clientCancel'),
+
+  // DNS benchmark
+  startDnsBench: (options) => ipcRenderer.invoke('dns:start', options),
+  cancelDnsBench: () => ipcRenderer.invoke('dns:cancel'),
+
+  // Port scanner
+  scanPortsHost: (ip, portList, options) => ipcRenderer.invoke('ports:scan', { ip, portList, options }),
+  commonPorts: () => ipcRenderer.invoke('ports:common'),
+
+  // Network info
+  netInfo: () => ipcRenderer.invoke('netinfo:summary'),
 
   // Favorites & settings
   getSettings: () => ipcRenderer.invoke('store:getSettings'),
