@@ -7,15 +7,14 @@
  *   1. User clicks "Check for updates".
  *   2. We query GitHub for a newer release.
  *   3. If found, we download it (streaming progress to the UI).
- *   4. When the download completes we show a dialog offering
- *      "Restart & Install"  /  "Later".
+ *   4. When the download completes the in-app modal shows a "Restart &
+ *      Install" button. Clicking it installs the update SILENTLY and relaunches
+ *      — no second native dialog, and no NSIS installer wizard to click through.
  *
  * The updater is only meaningful for the *installed* (NSIS) build.  In the
  * portable build or in development it reports "unsupported" instead of erroring,
  * and the UI hides/greys the button accordingly.
  */
-
-const { dialog } = require('electron');
 
 let autoUpdater = null;
 let log = null;
@@ -110,33 +109,14 @@ class UpdateManager {
 
     autoUpdater.on('update-downloaded', (info) => {
       this.info = { version: info.version, releaseNotes: info.releaseNotes, releaseName: info.releaseName };
+      // No native dialog — the in-app modal shows the "Restart & Install" button.
       this._setState('downloaded');
-      this._promptInstall();
     });
 
     autoUpdater.on('error', (err) => {
       this.error = (err && err.message) || String(err);
       this._setState('error');
     });
-  }
-
-  async _promptInstall() {
-    const win = this.getWindow && this.getWindow();
-    const version = (this.info && this.info.version) || '';
-    const { response } = await dialog.showMessageBox(win, {
-      type: 'info',
-      buttons: ['Restart & Install', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Update ready',
-      message: `IP Scanner ${version} has been downloaded.`,
-      detail: 'Would you like to restart and install it now, or later?',
-      noLink: true,
-    });
-    if (response === 0) {
-      // isSilent = false so the NSIS UI shows; isForceRunAfter = true to relaunch.
-      setImmediate(() => autoUpdater.quitAndInstall(false, true));
-    }
   }
 
   /** Invoked by the "Check for updates" button. */
@@ -158,10 +138,12 @@ class UpdateManager {
     }
   }
 
-  /** Install a downloaded update now (triggered from the UI, not just dialog). */
+  /** Install a downloaded update now (from the in-app "Restart & Install" button). */
   installNow() {
     if (this.state === 'downloaded' && this.supported()) {
-      setImmediate(() => autoUpdater.quitAndInstall(false, true));
+      // isSilent = true  -> install without the NSIS wizard (no "Next" clicks).
+      // isForceRunAfter = true -> relaunch the app once the update is applied.
+      setImmediate(() => autoUpdater.quitAndInstall(true, true));
       return { ok: true };
     }
     return { ok: false, reason: 'No update is ready to install' };
