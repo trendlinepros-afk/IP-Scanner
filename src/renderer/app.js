@@ -528,6 +528,61 @@ NT.generateReport = async () => {
   else NT.toast(`Report failed: ${res.error || 'unknown'}`, 'err', 5000);
 };
 
+// ---- Auto Run All Tools --------------------------------------------------
+NT._autorunReportPath = null;
+NT._autorunTotal = 8;
+NT.startAutoRun = () => {
+  if (!NT.activeClient) { NT.showClients(); return; }
+  NT._autorunReportPath = null;
+  NT.$('autorunSteps').textContent = '';
+  NT.$('autorunBar').style.width = '0%';
+  NT.$('autorunMsg').textContent = 'Running every diagnostic and building a PDF report. This takes about a minute…';
+  NT.$('autorunView').classList.add('hidden');
+  NT.$('autorunClose').classList.add('hidden');
+  NT.$('autorunCancel').classList.remove('hidden');
+  NT.$('autorunModal').classList.remove('hidden');
+  NT.api.startAutoRun(NT.activeClient.id, {});
+};
+NT._autorunRow = (i, name) => {
+  let row = document.getElementById(`ar-step-${i}`);
+  if (!row) {
+    row = NT.el('div', 'autorun-step');
+    row.id = `ar-step-${i}`;
+    row.innerHTML = '<span class="ar-ico">◷</span><span class="ar-name"></span><span class="ar-sum muted"></span>';
+    NT.$('autorunSteps').append(row);
+  }
+  row.querySelector('.ar-name').textContent = name;
+  return row;
+};
+NT._wireAutoRun = () => {
+  NT.api.on('autorun:start', (p) => { NT._autorunTotal = p.total || 8; });
+  NT.api.on('autorun:progress', (p) => {
+    const row = NT._autorunRow(p.index, p.name);
+    const ico = row.querySelector('.ar-ico');
+    const sum = row.querySelector('.ar-sum');
+    row.classList.remove('running');
+    if (p.status === 'running') { ico.textContent = '⟳'; row.classList.add('running'); }
+    else if (p.status === 'done') { ico.textContent = '✔'; row.classList.add('ok'); if (p.summary) sum.textContent = p.summary; }
+    else if (p.status === 'skipped') { ico.textContent = '–'; sum.textContent = 'not available'; }
+    else if (p.status === 'error') { ico.textContent = '✕'; row.classList.add('err'); sum.textContent = p.error || 'failed'; }
+    const total = p.total || NT._autorunTotal;
+    const done = Math.min(total, p.index + (p.status === 'running' ? 0 : 1));
+    NT.$('autorunBar').style.width = `${Math.round((done / total) * 100)}%`;
+  });
+  NT.api.on('autorun:done', (p) => {
+    NT.$('autorunBar').style.width = '100%';
+    NT.$('autorunCancel').classList.add('hidden');
+    NT.$('autorunClose').classList.remove('hidden');
+    if (p && p.error) { NT.$('autorunMsg').textContent = `Finished with an error: ${p.error}`; return; }
+    NT._autorunReportPath = p.reportPath;
+    NT.$('autorunMsg').textContent = p.cancelled
+      ? 'Cancelled. Any completed results were saved.'
+      : `Done — ${p.count} test(s) run. The PDF report opened automatically and is saved in the client's folder.`;
+    if (p.reportPath) NT.$('autorunView').classList.remove('hidden');
+    if (NT.activeClient) NT.api.getClient(NT.activeClient.id).then((c) => { if (c) NT.activeClient = c; }).catch(() => {});
+  });
+};
+
 // ---- init ----------------------------------------------------------------
 NT.init = async () => {
   NT.state.info = await NT.api.appInfo();
@@ -578,6 +633,13 @@ NT.init = async () => {
   NT.$('toClientsBtn').addEventListener('click', NT.showClients);
   NT.$('clientHistoryBtn').addEventListener('click', NT.openHistory);
   NT.$('clientReportBtn').addEventListener('click', NT.generateReport);
+
+  // Auto Run All Tools
+  NT.$('autoRunBtn').addEventListener('click', NT.startAutoRun);
+  NT.$('autorunClose').addEventListener('click', () => NT.$('autorunModal').classList.add('hidden'));
+  NT.$('autorunCancel').addEventListener('click', () => { NT.api.cancelAutoRun(); NT.$('autorunMsg').textContent = 'Cancelling…'; });
+  NT.$('autorunView').addEventListener('click', () => { if (NT._autorunReportPath) NT.api.openFile(NT._autorunReportPath); });
+  NT._wireAutoRun();
   NT.$('clientFolderBtn').addEventListener('click', () => { if (NT.activeClient) NT.api.openClientFolder(NT.activeClient.id); });
   NT.$('clientEditBtn').addEventListener('click', () => { if (NT.activeClient) NT.openClientModal(NT.activeClient); });
 

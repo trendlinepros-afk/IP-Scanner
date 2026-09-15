@@ -8,7 +8,7 @@
 const path = require('path');
 const fs = require('fs');
 const {
-  app, BrowserWindow, ipcMain, Menu, shell, dialog, nativeTheme,
+  app, BrowserWindow, ipcMain, Menu, shell, dialog, nativeTheme, screen,
 } = require('electron');
 
 const { Scanner } = require('./scanner');
@@ -29,6 +29,7 @@ const { DnsBenchmark } = require('./dns');
 const netinfo = require('./netinfo');
 const clients = require('./clients');
 const report = require('./report');
+const { AutoRun } = require('./autorun');
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -45,17 +46,29 @@ let tracerouteRunner = null;
 let lanServer = null;
 let lanClient = null;
 let dnsBench = null;
+let autoRun = null;
 
 function getWindow() {
   return mainWindow;
 }
 
 function createWindow() {
+  // Size to fit the display so every tool card is visible without scrolling,
+  // but never larger than the available work area.
+  let width = 1280;
+  let height = 940;
+  try {
+    const wa = screen.getPrimaryDisplay().workAreaSize;
+    width = Math.min(width, wa.width - 40);
+    height = Math.min(height, wa.height - 40);
+  } catch (_) { /* fall back to defaults */ }
+
   mainWindow = new BrowserWindow({
-    width: 1180,
-    height: 740,
+    width,
+    height,
     minWidth: 900,
-    minHeight: 560,
+    minHeight: 600,
+    center: true,
     backgroundColor: '#1e2430',
     title: 'IP Scanner',
     icon: resolveIcon(),
@@ -169,6 +182,27 @@ async function runSelfTest() {
     clients.deleteClient(c.id); // clean up
   } catch (err) {
     console.error('SELFTEST_FAIL', err.message);
+  } finally {
+    app.exit(0);
+  }
+  /* eslint-enable no-console */
+}
+
+async function runAutoRunTest() {
+  /* eslint-disable no-console */
+  try {
+    const c = clients.createClient({ name: `AutoRunTest ${Date.now()}`, company: 'QA' });
+    const ar = new AutoRun();
+    const progress = [];
+    ar.on('progress', (p) => progress.push(`${p.name}:${p.status}`));
+    // Skip the slow/network-heavy steps for a fast, deterministic check.
+    const res = await ar.run(c.id, { skip: ['speedtest', 'traceroute', 'dns', 'wifi'], runSeconds: 2, pingTarget: '127.0.0.1' });
+    const history = clients.getHistory(c.id);
+    const pdfOk = res.reportPath && fs.existsSync(res.reportPath) && fs.statSync(res.reportPath).size > 1000;
+    console.log('AUTORUN_TEST', JSON.stringify({ ok: !!pdfOk && history.length >= 1, results: res.count, saved: history.length, steps: progress.length, reportPath: res.reportPath }));
+    clients.deleteClient(c.id);
+  } catch (err) {
+    console.error('AUTORUN_TEST_FAIL', err.message);
   } finally {
     app.exit(0);
   }
@@ -508,6 +542,24 @@ function registerIpc() {
   // --- Network info ---
   ipcMain.handle('netinfo:summary', () => netinfo.summary());
 
+  // --- Auto Run All Tools ---
+  ipcMain.handle('autorun:start', (_e, { clientId, options }) => {
+    if (autoRun && autoRun.running) return { ok: false, error: 'Auto-run already in progress' };
+    autoRun = new AutoRun();
+    autoRun.on('start', (p) => send('autorun:start', p));
+    autoRun.on('progress', (p) => send('autorun:progress', p));
+    autoRun.on('done', (p) => {
+      send('autorun:done', p);
+      if (p.reportPath) shell.openPath(p.reportPath);
+    });
+    autoRun.run(clientId, options || {}).catch((err) => send('autorun:done', { error: err.message }));
+    return { ok: true };
+  });
+  ipcMain.handle('autorun:cancel', () => {
+    if (autoRun) autoRun.cancel();
+    return { ok: true };
+  });
+
   // --- Clients ---
   ipcMain.handle('clients:list', () => clients.listClients());
   ipcMain.handle('clients:create', (_e, info) => clients.createClient(info || {}));
@@ -580,6 +632,10 @@ if (!gotLock) {
     }
     if (process.env.IPSCANNER_SAMPLE_REPORT) {
       await runSampleReport(process.env.IPSCANNER_SAMPLE_REPORT);
+      return;
+    }
+    if (process.env.IPSCANNER_AUTORUN_TEST) {
+      await runAutoRunTest();
       return;
     }
 

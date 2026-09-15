@@ -23,6 +23,8 @@ const EVENT_CHANNELS = [
   'lan:client', 'lan:clientDone', 'lan:sample', 'lan:result', 'lan:error',
   // dns
   'dns:resolverDone', 'dns:result', 'dns:error',
+  // auto run
+  'autorun:start', 'autorun:progress', 'autorun:done',
   // updates
   'update:state',
   // menu
@@ -87,6 +89,10 @@ const api = {
 
   // Network info
   netInfo: () => ipcRenderer.invoke('netinfo:summary'),
+
+  // Auto Run All Tools
+  startAutoRun: (clientId, options) => ipcRenderer.invoke('autorun:start', { clientId, options }),
+  cancelAutoRun: () => ipcRenderer.invoke('autorun:cancel'),
 
   // Clients
   listClients: () => ipcRenderer.invoke('clients:list'),

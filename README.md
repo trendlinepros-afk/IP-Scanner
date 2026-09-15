@@ -51,6 +51,11 @@ client**, timestamped, under your Documents folder:
 
 From a client's dashboard:
 
+- **▶ Auto Run All Tools** — runs every diagnostic once, back-to-back, saving a
+  timestamped result for each, then builds and opens a PDF report. Continuous
+  tools are time-boxed: the ping monitor pings `8.8.8.8` for 10 seconds and
+  records **best / worst / average** latency and loss; the network scan is
+  bounded too. Great for a one-click site health check.
 - **🕑 History** — every recorded test with its date/time; delete individual
   runs or clear all.
 - **📄 Generate PDF Report** — a clean, **printable PDF** grouping all tests by

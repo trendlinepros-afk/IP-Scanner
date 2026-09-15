@@ -59,6 +59,10 @@
           <h1>IP Scanner <span class="hero-sub">Network Toolkit</span></h1>
           <p class="hero-tag">A complete suite for testing, measuring and mapping your network.</p>
         </div>
+        <div class="hero-autorun">
+          <button id="autoRunBtn" class="btn btn-primary big autorun-btn">▶&nbsp; Auto Run All Tools</button>
+          <div class="autorun-hint muted">Runs every tool &amp; builds a PDF report</div>
+        </div>
         <div class="hero-status" id="heroStatus"></div>
       </div>
       <div class="card-grid" id="cardGrid"></div>
@@ -177,6 +181,22 @@
       <div class="modal-body">
         <div class="history-toolbar"><span id="historyCount" class="muted"></span><div class="spacer"></div><button id="historyReport" class="btn btn-primary">📄 PDF Report</button><button id="historyClear" class="btn danger">Clear all</button></div>
         <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto Run progress modal -->
+  <div id="autorunModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="autorunTitle">Auto Run — All Tools</h2><button id="autorunClose" class="btn icon-btn hidden">✕</button></div>
+      <div class="modal-body">
+        <div class="progress-wrap" style="margin-bottom:12px"><div id="autorunBar" class="progress-bar"></div></div>
+        <div id="autorunSteps" class="autorun-steps"></div>
+        <p id="autorunMsg" class="muted" style="margin-top:12px">Running every diagnostic and building a PDF report. This takes about a minute…</p>
+      </div>
+      <div class="modal-foot">
+        <button id="autorunView" class="btn btn-primary hidden">View PDF Report</button>
+        <button id="autorunCancel" class="btn danger">Cancel</button>
       </div>
     </div>
   </div>
