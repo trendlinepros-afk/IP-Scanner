@@ -222,6 +222,31 @@ function analyze(networks) {
   return { byChannel, byBand, recommended24: best24 };
 }
 
+/**
+ * Fast current-link query (no full network scan) — for the live signal meter.
+ * Returns { supported, current } quickly so it can be polled ~once a second.
+ */
+async function currentLink() {
+  try {
+    let current = null;
+    if (isWin) {
+      const iface = await run('netsh wlan show interfaces');
+      current = parseWindowsInterface(iface.out);
+    } else if (isMac) {
+      const info = await run(`${AIRPORT} -I`);
+      current = parseAirportInfo(info.out);
+    } else {
+      // Linux: read the active row from nmcli WITHOUT a slow rescan.
+      const res = await run('nmcli -t -f ACTIVE,SSID,BSSID,SIGNAL,CHAN,FREQ,SECURITY dev wifi');
+      const parsed = res.out.trim() ? parseNmcli(res.out) : { current: null };
+      current = parsed.current;
+    }
+    return { supported: !!current, current: current || null, platform: process.platform };
+  } catch (err) {
+    return { supported: false, current: null, error: err.message, platform: process.platform };
+  }
+}
+
 async function scan() {
   try {
     let data;
@@ -243,4 +268,4 @@ async function scan() {
   }
 }
 
-module.exports = { scan, bandForChannel, dbmToQuality };
+module.exports = { scan, currentLink, bandForChannel, dbmToQuality };

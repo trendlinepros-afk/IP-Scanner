@@ -163,6 +163,10 @@
           <label class="field"><span>Phone</span><input id="cmPhone" type="text" /></label>
         </div>
         <label class="field"><span>Site / location</span><input id="cmSite" type="text" /></label>
+        <div class="field-row">
+          <label class="field"><span>Expected download (Mbps)</span><input id="cmExpectDown" type="number" min="0" placeholder="e.g. 500" /></label>
+          <label class="field"><span>Expected upload (Mbps)</span><input id="cmExpectUp" type="number" min="0" placeholder="e.g. 40" /></label>
+        </div>
         <label class="field"><span>Notes</span><textarea id="cmNotes" rows="3"></textarea></label>
       </div>
       <div class="modal-foot">
@@ -209,7 +213,9 @@
   <script src="app.js"></script>
   <script src="views/scanner.js"></script>
   <script src="views/speedtest.js"></script>
+  <script src="views/quality.js"></script>
   <script src="views/wifi.js"></script>
+  <script src="views/wifimeter.js"></script>
   <script src="views/ping.js"></script>
   <script src="views/traceroute.js"></script>
   <script src="views/lanspeed.js"></script>

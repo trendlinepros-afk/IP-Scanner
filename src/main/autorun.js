@@ -22,6 +22,7 @@ const wifi = require('./wifi');
 const { LatencyMonitor } = require('./latency');
 const { Traceroute } = require('./traceroute');
 const { DnsBenchmark } = require('./dns');
+const { QualityTest } = require('./quality');
 const { Scanner } = require('./scanner');
 const ports = require('./ports');
 const netinfo = require('./netinfo');
@@ -120,6 +121,17 @@ class AutoRun extends EventEmitter {
           this._active = st;
           const r = await st.run({ downloadSeconds: 6, uploadSeconds: 5, latencyCount: 15 });
           return { type: 'speedtest', title: 'Internet Speed Test', summary: `↓ ${r.downloadMbps} / ↑ ${r.uploadMbps} Mbps · ${r.ping} ms`, data: { downloadMbps: r.downloadMbps, uploadMbps: r.uploadMbps, ping: r.ping, jitter: r.jitter, loss: r.loss, server: r.server, connection: connLabel } };
+        },
+      },
+      {
+        key: 'quality',
+        name: 'Connection Quality (bufferbloat / VoIP)',
+        run: async () => {
+          const qt = new QualityTest();
+          this._active = qt;
+          const r = await qt.run({ idleMs: 3000, loadMs: 7000 });
+          if (r.cancelled) return null;
+          return { type: 'quality', title: 'Connection Quality', summary: `Bufferbloat ${r.grade} (+${r.bufferbloatMs} ms) · MOS ${r.mos} (${r.mosRating})`, data: r };
         },
       },
       {

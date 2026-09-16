@@ -23,6 +23,8 @@ const EVENT_CHANNELS = [
   'lan:client', 'lan:clientDone', 'lan:sample', 'lan:result', 'lan:error',
   // dns
   'dns:resolverDone', 'dns:result', 'dns:error',
+  // connection quality (bufferbloat / VoIP)
+  'quality:phase', 'quality:sample', 'quality:result', 'quality:error',
   // auto run
   'autorun:start', 'autorun:progress', 'autorun:done',
   // updates
@@ -63,6 +65,11 @@ const api = {
 
   // WiFi analyzer
   wifiScan: () => ipcRenderer.invoke('wifi:scan'),
+  wifiCurrent: () => ipcRenderer.invoke('wifi:current'),
+
+  // Connection quality (bufferbloat + VoIP MOS)
+  startQuality: (options) => ipcRenderer.invoke('quality:start', options),
+  cancelQuality: () => ipcRenderer.invoke('quality:cancel'),
 
   // Latency monitor
   startLatency: (target, options) => ipcRenderer.invoke('latency:start', { target, options }),

@@ -18,8 +18,10 @@ A launcher home page opens first; each card opens a full tool:
 | Tool | What it does | Modeled on |
 |---|---|---|
 | **⚡ Speed Test** | Internet **download / upload / ping / jitter / loss** on a live gauge, measured against Cloudflare's global network. Labels whether you're on WiFi or Ethernet so you can compare. | Ookla / Cloudflare speed test |
+| **🩺 Connection Quality** | **Bufferbloat** (latency-under-load, graded A+–F) and a **VoIP MOS** call-quality score from latency/jitter/loss — explains "fast speedtest but laggy calls". | Waveform / DSLReports bufferbloat |
 | **🚀 LAN Speed Test** | iPerf-style TCP **throughput between two machines** (multi-stream). Run the built-in server on one PC, the client on another — compare WiFi vs Ethernet on your own LAN. | iPerf3 |
 | **📶 WiFi Analyzer** | Nearby APs with **SSID, BSSID, signal (dBm), band, channel, security, PHY**, current-link quality, band breakdown and a **channel-congestion graph** with a best-channel recommendation. | inSSIDer / NetSpot |
+| **📶 WiFi Signal Meter** | Big live dBm readout + graph you watch while walking a site to find dead spots; records min/max/avg. | WiFi signal apps |
 | **ℹ️ Network Info** | Adapters, default gateway, DNS servers, and **public IP / ISP / geo**. | — |
 | **🖧 IP Scanner** | Multithreaded LAN discovery: status, name, **IP, MAC, manufacturer (OUI)**, shared resources; right-click **RDP / SSH / Telnet / WoL / shares**; CSV/HTML/XML/JSON export. | Advanced IP Scanner |
 | **📡 Ping Monitor** | Continuous latency with a **live graph**, min/avg/max, **jitter and packet loss**. | PingPlotter / MTR |
@@ -64,6 +66,9 @@ From a client's dashboard:
   see trends over time. The PDF is saved under the client's `reports/` folder
   and opened automatically (print from your PDF viewer). Reports are rendered
   with Electron's built-in `printToPDF` — no external tools required.
+  - A **health summary** at the top grades key metrics green / amber / red and
+    shows **change-since-last-visit** deltas. Speed is graded against the
+    client's **expected plan speed** (set it in the client's details).
 - **📁** opens the client's folder; **✎** edits client details.
 
 ---

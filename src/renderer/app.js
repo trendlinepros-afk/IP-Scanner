@@ -159,8 +159,10 @@ NT.LineChart = class {
     ctx.clearRect(0, 0, w, h);
 
     const vals = this.data.filter((x) => x != null);
-    let max = this.max || (vals.length ? Math.max(...vals) : 1);
-    max = Math.max(max * 1.15, this.minMax, 1);
+    let max;
+    if (this.max) { max = this.max; } // fixed scale (e.g. 0–100%) — no headroom
+    else { max = vals.length ? Math.max(...vals) : 1; max = Math.max(max * 1.15, this.minMax, 1); }
+    max = Math.max(max, 1);
     const pad = 4;
 
     // grid
@@ -447,6 +449,8 @@ NT.openClientModal = (client) => {
   NT.$('cmEmail').value = client ? client.email || '' : '';
   NT.$('cmPhone').value = client ? client.phone || '' : '';
   NT.$('cmSite').value = client ? client.site || '' : '';
+  NT.$('cmExpectDown').value = client && client.expectedDownMbps ? client.expectedDownMbps : '';
+  NT.$('cmExpectUp').value = client && client.expectedUpMbps ? client.expectedUpMbps : '';
   NT.$('cmNotes').value = client ? client.notes || '' : '';
   NT.$('clientModal').classList.remove('hidden');
   setTimeout(() => NT.$('cmName').focus(), 30);
@@ -459,6 +463,8 @@ NT._saveClientModal = async () => {
     email: NT.$('cmEmail').value.trim(),
     phone: NT.$('cmPhone').value.trim(),
     site: NT.$('cmSite').value.trim(),
+    expectedDownMbps: parseFloat(NT.$('cmExpectDown').value) || null,
+    expectedUpMbps: parseFloat(NT.$('cmExpectUp').value) || null,
     notes: NT.$('cmNotes').value.trim(),
   };
   if (!info.name) { NT.toast('Client name is required', 'err'); return; }
@@ -495,7 +501,7 @@ NT.saveResult = async (record) => {
 };
 
 // ---- History modal -------------------------------------------------------
-NT._typeIcon = { speedtest: '⚡', lanspeed: '🚀', wifi: '📶', ping: '📡', traceroute: '🧭', dns: '🧩', ports: '🔓', scan: '🖧', test: '◆' };
+NT._typeIcon = { speedtest: '⚡', quality: '🩺', lanspeed: '🚀', wifi: '📶', wifimeter: '📶', ping: '📡', traceroute: '🧭', dns: '🧩', ports: '🔓', scan: '🖧', netinfo: 'ℹ️', test: '◆' };
 NT.openHistory = async () => {
   if (!NT.activeClient) return;
   NT.$('historyTitle').textContent = `Test history — ${NT.activeClient.name}`;

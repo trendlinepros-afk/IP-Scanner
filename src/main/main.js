@@ -30,6 +30,7 @@ const netinfo = require('./netinfo');
 const clients = require('./clients');
 const report = require('./report');
 const { AutoRun } = require('./autorun');
+const { QualityTest } = require('./quality');
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -47,6 +48,7 @@ let lanServer = null;
 let lanClient = null;
 let dnsBench = null;
 let autoRun = null;
+let qualityTest = null;
 
 function getWindow() {
   return mainWindow;
@@ -196,7 +198,7 @@ async function runAutoRunTest() {
     const progress = [];
     ar.on('progress', (p) => progress.push(`${p.name}:${p.status}`));
     // Skip the slow/network-heavy steps for a fast, deterministic check.
-    const res = await ar.run(c.id, { skip: ['speedtest', 'traceroute', 'dns', 'wifi'], runSeconds: 2, pingTarget: '127.0.0.1' });
+    const res = await ar.run(c.id, { skip: ['speedtest', 'quality', 'traceroute', 'dns', 'wifi'], runSeconds: 2, pingTarget: '127.0.0.1' });
     const history = clients.getHistory(c.id);
     const pdfOk = res.reportPath && fs.existsSync(res.reportPath) && fs.statSync(res.reportPath).size > 1000;
     console.log('AUTORUN_TEST', JSON.stringify({ ok: !!pdfOk && history.length >= 1, results: res.count, saved: history.length, steps: progress.length, reportPath: res.reportPath }));
@@ -214,12 +216,14 @@ async function runSampleReport(outPath) {
   try {
     const now = Date.now();
     const day = 86400e3;
-    const client = { name: 'Acme Corp', company: 'Acme Corporation', contact: 'Jane Doe', email: 'jane@acme.example', phone: '(555) 010-4477', site: 'HQ — 2nd floor', notes: 'Recurring monthly network health check. Compare WiFi vs wired drops in the conference rooms.' };
+    const client = { name: 'Acme Corp', company: 'Acme Corporation', contact: 'Jane Doe', email: 'jane@acme.example', phone: '(555) 010-4477', site: 'HQ — 2nd floor', expectedDownMbps: 500, expectedUpMbps: 40, notes: 'Recurring monthly network health check. Compare WiFi vs wired drops in the conference rooms.' };
     const history = [
       { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 6 * day, summary: '', data: { downloadMbps: 452.1, uploadMbps: 39.8, ping: 9.1, jitter: 1.6, loss: 0, server: 'speed.cloudflare.com', connection: 'Wi-Fi · HomeNet-5G (-52 dBm)' } },
       { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 6 * day + 3600e3, summary: '', data: { downloadMbps: 934.5, uploadMbps: 41.2, ping: 6.8, jitter: 0.9, loss: 0, server: 'speed.cloudflare.com', connection: 'Ethernet' } },
       { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 2 * day, summary: '', data: { downloadMbps: 478.0, uploadMbps: 40.1, ping: 8.7, jitter: 1.2, loss: 0, server: 'speed.cloudflare.com', connection: 'Wi-Fi · HomeNet-5G (-49 dBm)' } },
       { type: 'speedtest', title: 'Internet Speed Test', timestamp: now - 3600e3, summary: '', data: { downloadMbps: 941.2, uploadMbps: 42.0, ping: 6.5, jitter: 0.8, loss: 0, server: 'speed.cloudflare.com', connection: 'Ethernet' } },
+      { type: 'quality', title: 'Connection Quality', timestamp: now - 6 * day + 200e3, summary: '', data: { grade: 'B', gradeRank: 2, baselineMs: 12, loadedLatencyMs: 58, bufferbloatMs: 46, mos: 4.11, mosRating: 'Good', downloadMbps: 452, uploadMbps: 39.8, idle: { avg: 12, min: 11, max: 15, jitter: 1.6, loss: 0 } } },
+      { type: 'quality', title: 'Connection Quality', timestamp: now - 3600e3, summary: '', data: { grade: 'A', gradeRank: 1, baselineMs: 8, loadedLatencyMs: 26, bufferbloatMs: 18, mos: 4.31, mosRating: 'Excellent', downloadMbps: 941, uploadMbps: 42, idle: { avg: 8, min: 6, max: 12, jitter: 0.9, loss: 0 } } },
       { type: 'lanspeed', title: 'LAN Speed Test', timestamp: now - 2 * day + 1200e3, summary: '', data: { mode: 'download', mbps: 942, bytes: 1.18e9, seconds: 10, host: '192.168.1.20', port: 5201 } },
       { type: 'lanspeed', title: 'LAN Speed Test', timestamp: now - 2 * day + 1500e3, summary: '', data: { mode: 'download', mbps: 289, bytes: 3.6e8, seconds: 10, host: '192.168.1.20', port: 5201 } },
       { type: 'ping', title: 'Ping Monitor', timestamp: now - day, summary: '', data: { target: '8.8.8.8', avg: 12.4, min: 11, max: 33, jitter: 1.8, lossPct: 0, sent: 120, recv: 120 } },
@@ -450,6 +454,20 @@ function registerIpc() {
 
   // --- WiFi analyzer ---
   ipcMain.handle('wifi:scan', () => wifi.scan());
+  ipcMain.handle('wifi:current', () => wifi.currentLink());
+
+  // --- Connection quality (bufferbloat + VoIP MOS) ---
+  ipcMain.handle('quality:start', (_e, options) => {
+    if (qualityTest && qualityTest.running) return { ok: false, error: 'Quality test already running' };
+    qualityTest = new QualityTest();
+    qualityTest.on('phase', (p) => send('quality:phase', p));
+    qualityTest.on('sample', (p) => send('quality:sample', p));
+    qualityTest.on('result', (p) => send('quality:result', p));
+    qualityTest.on('error', (err) => send('quality:error', { message: err.message }));
+    qualityTest.run(options || {}).catch((err) => send('quality:error', { message: err.message }));
+    return { ok: true };
+  });
+  ipcMain.handle('quality:cancel', () => { if (qualityTest) qualityTest.cancel(); return { ok: true }; });
 
   // --- Latency monitor ---
   ipcMain.handle('latency:start', (_e, { target, options }) => {

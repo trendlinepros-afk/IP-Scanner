@@ -1,7 +1,7 @@
 {
   "name": "ip-scanner",
   "productName": "IP Scanner",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "IP Scanner — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
   "author": {
     "name": "TrendlinePros",

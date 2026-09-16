@@ -118,7 +118,7 @@ img { max-width: 100%; }
 .kv dt { color: var(--text-muted); }
 .kv dd { margin: 0; font-family: var(--mono); word-break: break-all; user-select: text; }
 
-.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; width: 100%; }
 .stat { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
 .stat-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stat-val.good { color: var(--up); } .stat-val.ok { color: var(--ok); } .stat-val.bad { color: var(--down); }
@@ -331,6 +331,35 @@ td.num.good { color: var(--up); } td.num.ok { color: var(--ok); } td.num.bad { c
 .autorun-step.err .ar-ico { color: var(--down); }
 .autorun-step .ar-name { flex: 0 0 auto; min-width: 190px; }
 .autorun-step .ar-sum { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+
+/* ---- Connection Quality view ------------------------------------------- */
+.ql-wrap { max-width: 760px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.ql-grade-wrap { text-align: center; }
+.ql-grade { font-size: 64px; font-weight: 800; line-height: 1; width: 120px; height: 120px; border-radius: 20px; display: grid; place-items: center; background: var(--bg-elev); border: 2px solid var(--border-strong); color: var(--text-muted); }
+.ql-grade.good { color: var(--up); border-color: var(--up); }
+.ql-grade.warn { color: var(--ok); border-color: var(--ok); }
+.ql-grade.bad { color: var(--down); border-color: var(--down); }
+.ql-grade-cap { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.ql-phase { color: var(--text-dim); text-align: center; }
+.ql-chart { width: 100%; height: 150px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; }
+.ql-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; }
+.ql-actions { margin-top: 4px; }
+.ql-note { text-align: center; max-width: 620px; font-size: 12px; }
+@media (max-width: 720px) { .ql-tiles { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---- WiFi Signal Meter view -------------------------------------------- */
+.wm-wrap { max-width: 720px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.wm-readout { text-align: center; width: 100%; }
+.wm-dbm { font-size: 72px; font-weight: 800; line-height: 1; color: var(--text-muted); }
+.wm-dbm.good { color: var(--up); } .wm-dbm.ok { color: var(--ok); } .wm-dbm.bad { color: var(--down); }
+.wm-dbm-unit { font-size: 13px; color: var(--text-muted); margin-top: -4px; }
+.wm-bar { width: 100%; max-width: 480px; margin: 12px auto 4px; height: 14px; background: var(--border); border-radius: 8px; overflow: hidden; }
+.wm-fill { height: 100%; width: 0%; background: var(--text-muted); transition: width 0.3s ease; }
+.wm-fill.good { background: var(--up); } .wm-fill.ok { background: var(--ok); } .wm-fill.bad { background: var(--down); }
+.wm-quality { font-size: 12px; color: var(--text-dim); }
+.wm-link { text-align: center; }
+.wm-chart { width: 100%; height: 170px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; }
+.wm-note { text-align: center; font-size: 12px; }
 
 /* ---- Scrollbars --------------------------------------------------------- */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
