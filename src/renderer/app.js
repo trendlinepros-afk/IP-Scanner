@@ -3,7 +3,7 @@
 /* global window, document */
 
 /**
- * App shell for the IP Scanner network toolkit.
+ * App shell for the IT Tools network toolkit.
  * Provides a global `NT` namespace: shared helpers, a view router, a card-based
  * home page, reusable canvas chart/gauge widgets, and the shared Settings /
  * Update / About modals. Tool views register themselves via NT.registerView().
@@ -390,7 +390,7 @@ NT._renderUpdate = (p) => {
 NT.showAbout = () => {
   const i = NT.state.info || {};
   NT.$('aboutBody').innerHTML = `
-    <p><strong>IP Scanner</strong> — Network Toolkit v${NT.escapeHtml(i.version || '?')}</p>
+    <p><strong>IT Tools</strong> — Network Toolkit v${NT.escapeHtml(i.version || '?')}</p>
     <p class="muted">Speed tests, WiFi analysis, latency, traceroute, LAN throughput, DNS benchmarking, device discovery and more.</p>
     <dl class="kv">
       <dt>Platform</dt><dd>${NT.escapeHtml(i.platform || '')}</dd>
@@ -631,7 +631,7 @@ NT.init = async () => {
   NT.state.info = await NT.api.appInfo();
   NT.state.settings = await NT.api.getSettings();
   await NT.api.setTheme(NT.state.settings.theme || 'system');
-  NT.$('appVersion').textContent = `IP Scanner v${NT.state.info.version}${NT.state.info.isPortable ? ' · portable' : ''}`;
+  NT.$('appVersion').textContent = `IT Tools v${NT.state.info.version}${NT.state.info.isPortable ? ' · portable' : ''}`;
 
   // Create a section container per registered view.
   const views = NT.$('views');
@@ -667,7 +667,7 @@ NT.init = async () => {
   NT.$('aboutOk').addEventListener('click', () => NT.$('aboutModal').classList.add('hidden'));
 
   // Clients screen wiring
-  if (NT.$('appVersion2')) NT.$('appVersion2').textContent = `IP Scanner v${NT.state.info.version}`;
+  if (NT.$('appVersion2')) NT.$('appVersion2').textContent = `IT Tools v${NT.state.info.version}`;
   NT.$('newClientBtn').addEventListener('click', () => NT.openClientModal(null));
   NT.$('clientsSettingsBtn').addEventListener('click', NT.openSettings);
   NT.$('clientSearch').addEventListener('input', (e) => { NT._clientFilter = e.target.value; NT._renderClients(); });

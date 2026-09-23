@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * IP Scanner — Electron main process.
+ * IT Tools — Electron main process.
  * Owns the application window, native menu, IPC surface and the auto-updater.
  */
 
@@ -74,7 +74,7 @@ function createWindow() {
     minHeight: 600,
     center: true,
     backgroundColor: '#1e2430',
-    title: 'IP Scanner',
+    title: 'IT Tools',
     icon: resolveIcon(),
     show: false,
     webPreferences: {
@@ -313,7 +313,7 @@ function buildMenu() {
           label: 'Project on GitHub',
           click: () => shell.openExternal('https://github.com/trendlinepros-afk/ip-scanner'),
         },
-        { label: 'About IP Scanner', click: () => send('menu:about') },
+        { label: 'About IT Tools', click: () => send('menu:about') },
       ],
     },
   ];
@@ -331,7 +331,7 @@ function registerIpc() {
   // --- Environment / interfaces ---
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
-    name: 'IP Scanner',
+    name: 'IT Tools',
     platform: process.platform,
     isPortable,
     isDev,
@@ -418,7 +418,7 @@ function registerIpc() {
     const { content, ext } = exporter.render(format, hosts, meta);
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: 'Export scan results',
-      defaultPath: `ip-scanner-scan.${ext}`,
+      defaultPath: `it-tools-scan.${ext}`,
       filters: [
         { name: format.toUpperCase(), extensions: [ext] },
         { name: 'All Files', extensions: ['*'] },

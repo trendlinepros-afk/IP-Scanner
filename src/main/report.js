@@ -292,7 +292,7 @@ function buildReportHtml(client, history, meta = {}) {
 </style></head><body>
   <div class="cover">
     <div>
-      <div class="brand">IP Scanner <small>Network Toolkit</small></div>
+      <div class="brand">IT Tools <small>Network Toolkit</small></div>
       <h1>Network Diagnostics Report</h1>
     </div>
     <div class="meta">
@@ -315,7 +315,7 @@ function buildReportHtml(client, history, meta = {}) {
   ${buildSummary(byType)}
   <div class="chips">${counts || '<span class="muted">No tests recorded.</span>'}</div>
   ${sections}
-  <div class="footer"><span>IP Scanner — Network Toolkit</span><span>Report for ${esc(client.name || '')}</span></div>
+  <div class="footer"><span>IT Tools — Network Toolkit</span><span>Report for ${esc(client.name || '')}</span></div>
 </body></html>`;
 }
 

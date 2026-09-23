@@ -1,8 +1,8 @@
 {
   "name": "ip-scanner",
-  "productName": "IP Scanner",
-  "version": "1.5.0",
-  "description": "IP Scanner — a fast network / IP scanner with host discovery, MAC vendor lookup, shared-folder detection, Wake-on-LAN and remote tools. An open Advanced IP Scanner alternative.",
+  "productName": "IT Tools",
+  "version": "1.6.0",
+  "description": "IT Tools — a complete network testing & IT toolkit: speed tests, WiFi analysis, latency, LAN throughput, DNS benchmarking, device discovery, client PDF reports and a built-in app uninstaller with registry cleaner.",
   "author": {
     "name": "TrendlinePros",
     "email": "support@example.com"
@@ -35,7 +35,7 @@
   },
   "build": {
     "appId": "com.trendlinepros.ipscanner",
-    "productName": "IP Scanner",
+    "productName": "IT Tools",
     "copyright": "Copyright © 2026 TrendlinePros",
     "asar": true,
     "files": [
@@ -81,11 +81,11 @@
         }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "IP-Scanner-Setup-${version}.${ext}",
+      "artifactName": "IT-Tools-Setup-${version}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "portable": {
-      "artifactName": "IP-Scanner-Portable-${version}.${ext}"
+      "artifactName": "IT-Tools-Portable-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -94,8 +94,8 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "IP Scanner",
-      "uninstallDisplayName": "IP Scanner ${version}",
+      "shortcutName": "IT Tools",
+      "uninstallDisplayName": "IT Tools ${version}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false
@@ -106,7 +106,7 @@
         "zip"
       ],
       "icon": "build/icon.png",
-      "artifactName": "IP-Scanner-${version}-${arch}.${ext}",
+      "artifactName": "IT-Tools-${version}-${arch}.${ext}",
       "category": "public.app-category.utilities"
     },
     "linux": {
@@ -115,7 +115,7 @@
         "deb"
       ],
       "icon": "build/icon.png",
-      "artifactName": "IP-Scanner-${version}.${ext}",
+      "artifactName": "IT-Tools-${version}.${ext}",
       "category": "Network",
       "maintainer": "TrendlinePros"
     }
