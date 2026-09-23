@@ -361,6 +361,58 @@ td.num.good { color: var(--up); } td.num.ok { color: var(--ok); } td.num.bad { c
 .wm-chart { width: 100%; height: 170px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; }
 .wm-note { text-align: center; font-size: 12px; }
 
+/* ---- Other Tools section (Clients screen) ------------------------------ */
+.other-tools { padding: 8px 30px 26px; }
+.other-tools-head { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+.other-tools-head h2 { margin: 0; font-size: 17px; }
+.other-tools-head p { margin: 0; font-size: 12px; }
+.other-tools-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+/* ---- App Uninstaller view ---------------------------------------------- */
+.unin-wrap { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
+.unin-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.unin-toolbar .filter-input { flex: 0 1 300px; }
+.unin-count { white-space: nowrap; font-size: 12px; }
+.unin-note { font-size: 12px; margin: 0; }
+.unin-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-elev); }
+.unin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.unin-table thead th { position: sticky; top: 0; z-index: 1; background: var(--bg-toolbar); text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
+.unin-table th.sortable { cursor: pointer; user-select: none; }
+.unin-table th.sortable:hover { color: var(--accent); }
+.unin-table th.sorted::after { content: " ▾"; opacity: 0.8; }
+.unin-table th.sorted[data-dir="asc"]::after { content: " ▴"; }
+.unin-c-check { width: 34px; text-align: center; }
+.unin-c-size { width: 92px; white-space: nowrap; }
+.unin-c-ver { width: 130px; }
+.unin-c-type { width: 96px; }
+.unin-c-pub { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unin-row td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.unin-row:hover { background: var(--row-hover); }
+.unin-row.sel { background: var(--row-sel); }
+.unin-row { cursor: pointer; }
+.unin-c-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.unin-ico { flex: 0 0 auto; }
+.unin-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unin-date { font-size: 11px; margin-left: 6px; flex: 0 0 auto; }
+.unin-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); white-space: nowrap; }
+.unin-badge.store { background: color-mix(in srgb, #4a94ec 16%, transparent); color: #4a94ec; }
+.unin-empty { padding: 30px; text-align: center; }
+.unin-confirm-list { max-height: 200px; overflow: auto; margin: 6px 0 14px; padding-left: 20px; }
+.unin-confirm-list li { margin: 2px 0; }
+
+/* leftovers modal */
+.unin-left-warn { background: color-mix(in srgb, var(--warn) 15%, transparent); border: 1px solid var(--warn); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
+.unin-left-toolbar { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.checkbox.inline { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.unin-left-list { display: flex; flex-direction: column; gap: 3px; max-height: 48vh; overflow: auto; }
+.unin-left-group { font-weight: 700; font-size: 12px; color: var(--text-dim); margin: 10px 0 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.unin-left-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); cursor: pointer; }
+.unin-left-item .unin-left-kind { flex: 0 0 auto; }
+.unin-left-path { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+.unin-left-size { flex: 0 0 auto; font-size: 11px; }
+.unin-left-item.removed { opacity: 0.45; text-decoration: line-through; }
+.unin-left-item.failed { border-color: var(--down); }
+
 /* ---- Scrollbars --------------------------------------------------------- */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 6px; border: 2px solid var(--bg-elev); }

@@ -38,6 +38,25 @@ NetBIOS names) are platform-specific and degrade gracefully where unavailable.
 
 ---
 
+## Other Tools
+
+Beyond the per-client diagnostics, the **Clients** screen has an **Other Tools**
+section (bottom of the page) for standalone system utilities that don't need a
+client:
+
+| Tool | What it does | Modeled on |
+|---|---|---|
+| **🗑 App Uninstaller** | Lists installed **programs** (registry Uninstall keys, all roots) and **Store / UWP apps**; **bulk-select** with checkboxes and uninstall one or many. After uninstalling it can **scan for leftovers** — orphaned **registry entries** and **files/folders** the program's own uninstaller left behind — which you review and delete (a built-in **registry cleaner**). | Revo Uninstaller |
+
+The uninstaller is **Windows-only** (it drives `powershell`, `msiexec` and
+`reg`); on other platforms it opens in a clearly-labelled preview mode. Leftover
+detection is deliberately **conservative** and every deletion is explicit,
+user-selected, and re-validated in the main process — protected system paths
+and shallow/critical registry keys are refused. Removing entries under
+`HKLM` or `Program Files` may require running the app **as administrator**.
+
+---
+
 ## Clients & PDF reports
 
 The app opens to a **Clients** screen — create and manage a client for each

@@ -84,7 +84,9 @@ NT._hideAll = () => {
 NT.showView = (id) => {
   const def = NT._viewById(id);
   if (!def) return;
-  if (!NT.activeClient) { NT.showClients(); return; }
+  // Standalone tools (e.g. the uninstaller) need no active client; everything
+  // else is a per-client diagnostic and returns to the Clients screen.
+  if (!def.standalone && !NT.activeClient) { NT.showClients(); return; }
   // Leave current
   const cur = NT._viewById(NT.state.view);
   if (cur && cur.onLeave) { try { cur.onLeave(); } catch (_) { /* */ } }
@@ -103,10 +105,19 @@ NT.showView = (id) => {
   NT.$('appbar').classList.remove('hidden');
   NT.$('viewIcon').textContent = def.icon || '';
   NT.$('viewTitle').textContent = def.title;
+  NT._backTo = def.standalone ? 'clients' : 'home';
+  const backBtn = NT.$('backBtn');
+  if (backBtn) backBtn.textContent = def.standalone ? '‹ Clients' : '‹ Home';
 
   NT.state.view = id;
   window.scrollTo(0, 0);
   if (def.onEnter) { try { def.onEnter(); } catch (_) { /* */ } }
+};
+
+// Back button target depends on how the current view was opened.
+NT.back = () => {
+  if (NT._backTo === 'clients') { NT.showClients(); return; }
+  NT.goHome();
 };
 
 NT.goHome = () => {
@@ -126,6 +137,7 @@ NT.showClients = () => {
   NT.$('view-clients').classList.remove('hidden');
   NT.state.view = 'clients';
   NT._renderClients();
+  NT._renderOtherTools();
   window.scrollTo(0, 0);
 };
 
@@ -248,7 +260,7 @@ NT._buildHome = () => {
   grid.textContent = '';
   const groups = {};
   NT._views.forEach((v) => {
-    if (v.hidden) return;
+    if (v.hidden || v.standalone) return; // standalone tools live on the Clients screen
     (groups[v.group || 'Tools'] = groups[v.group || 'Tools'] || []).push(v);
   });
   const order = ['Speed & Throughput', 'WiFi & Connectivity', 'Discovery & Diagnostics', 'Tools'];
@@ -425,6 +437,31 @@ NT._renderClients = async () => {
     grid.append(card);
   }
   if (NT._clients.length && list.length === 0) grid.innerHTML = '<p class="muted" style="padding:20px">No clients match your search.</p>';
+};
+
+// "Other Tools" section on the Clients screen — standalone utilities that need
+// no client (e.g. the App Uninstaller).
+NT._renderOtherTools = () => {
+  const grid = NT.$('otherToolsGrid');
+  const wrap = NT.$('otherTools');
+  if (!grid || !wrap) return;
+  grid.textContent = '';
+  const tools = NT._views.filter((v) => v.standalone);
+  wrap.classList.toggle('hidden', tools.length === 0);
+  for (const v of tools) {
+    const card = NT.el('button', 'tool-card');
+    card.dataset.tool = v.id;
+    if (v.accent) card.style.setProperty('--card-accent', v.accent);
+    card.innerHTML = `
+      <div class="tool-icon">${v.icon || '◆'}</div>
+      <div class="tool-meta">
+        <div class="tool-name">${NT.escapeHtml(v.title)}</div>
+        <div class="tool-desc">${NT.escapeHtml(v.desc || '')}</div>
+      </div>
+      <div class="tool-arrow">›</div>`;
+    card.addEventListener('click', () => NT.showView(v.id));
+    grid.append(card);
+  }
 };
 
 NT.openClient = async (id) => {
@@ -607,7 +644,7 @@ NT.init = async () => {
   NT._buildHome();
 
   // Shell wiring
-  NT.$('backBtn').addEventListener('click', NT.goHome);
+  NT.$('backBtn').addEventListener('click', NT.back);
   NT.$('settingsBtn').addEventListener('click', NT.openSettings);
   NT.$('updateBtn').addEventListener('click', NT.openUpdate);
   NT.$('homeSettings').addEventListener('click', NT.openSettings);

@@ -39,6 +39,16 @@
         <div class="empty-icon">📁</div>
         <p>No clients yet.</p><p class="empty-hint">Click <strong>+ New Client</strong> to get started.</p>
       </div>
+
+      <!-- Other Tools: standalone utilities that don't need a client -->
+      <section class="other-tools hidden" id="otherTools">
+        <div class="other-tools-head">
+          <h2>Other Tools</h2>
+          <p class="muted">System utilities — available any time, no client required.</p>
+        </div>
+        <div class="cards other-tools-grid" id="otherToolsGrid"></div>
+      </section>
+
       <footer class="home-footer"><span id="clientsPath" class="muted"></span><div class="spacer"></div><span id="appVersion2" class="muted"></span></footer>
     </section>
 
@@ -222,6 +232,7 @@
   <script src="views/dns.js"></script>
   <script src="views/ports.js"></script>
   <script src="views/netinfo.js"></script>
+  <script src="views/uninstaller.js"></script>
   <script src="boot.js"></script>
 </body>
 </html>

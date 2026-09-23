@@ -31,6 +31,7 @@ const clients = require('./clients');
 const report = require('./report');
 const { AutoRun } = require('./autorun');
 const { QualityTest } = require('./quality');
+const uninstaller = require('./uninstaller');
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -49,6 +50,7 @@ let lanClient = null;
 let dnsBench = null;
 let autoRun = null;
 let qualityTest = null;
+let uninstallJob = null;
 
 function getWindow() {
   return mainWindow;
@@ -589,6 +591,21 @@ function registerIpc() {
   ipcMain.handle('clients:saveResult', (_e, { id, record }) => clients.saveResult(id, record));
   ipcMain.handle('clients:deleteResult', (_e, { id, resultId }) => clients.deleteResult(id, resultId));
   ipcMain.handle('clients:clearHistory', (_e, { id }) => clients.clearHistory(id));
+
+  // --- App Uninstaller + registry / leftover cleaner (Windows) ---
+  ipcMain.handle('uninstall:list', () => uninstaller.listApps());
+  ipcMain.handle('uninstall:start', (_e, { apps, silent, scanAfter }) => {
+    if (uninstallJob && uninstallJob.running) return { ok: false, error: 'An uninstall is already in progress' };
+    uninstallJob = new uninstaller.Uninstaller();
+    uninstallJob.on('progress', (p) => send('uninstall:progress', p));
+    uninstallJob.on('done', (p) => send('uninstall:done', p));
+    uninstallJob.run(apps || [], { silent, scanAfter })
+      .catch((err) => send('uninstall:done', { error: err.message, results: [], leftovers: [] }));
+    return { ok: true };
+  });
+  ipcMain.handle('uninstall:cancel', () => { if (uninstallJob) uninstallJob.cancel(); return { ok: true }; });
+  ipcMain.handle('uninstall:scan', (_e, { app }) => uninstaller.scanLeftovers(app));
+  ipcMain.handle('uninstall:removeLeftovers', (_e, { items }) => uninstaller.removeLeftovers(items || []));
 
   // --- PDF report ---
   ipcMain.handle('report:generate', async (_e, { id, open }) => {

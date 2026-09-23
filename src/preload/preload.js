@@ -25,6 +25,8 @@ const EVENT_CHANNELS = [
   'dns:resolverDone', 'dns:result', 'dns:error',
   // connection quality (bufferbloat / VoIP)
   'quality:phase', 'quality:sample', 'quality:result', 'quality:error',
+  // app uninstaller
+  'uninstall:progress', 'uninstall:done',
   // auto run
   'autorun:start', 'autorun:progress', 'autorun:done',
   // updates
@@ -96,6 +98,15 @@ const api = {
 
   // Network info
   netInfo: () => ipcRenderer.invoke('netinfo:summary'),
+
+  // App uninstaller + registry / leftover cleaner
+  listInstalledApps: () => ipcRenderer.invoke('uninstall:list'),
+  uninstallApps: (apps, opts) => ipcRenderer.invoke('uninstall:start', {
+    apps, silent: !!(opts && opts.silent), scanAfter: !!(opts && opts.scanAfter),
+  }),
+  cancelUninstall: () => ipcRenderer.invoke('uninstall:cancel'),
+  scanLeftovers: (app) => ipcRenderer.invoke('uninstall:scan', { app }),
+  removeLeftovers: (items) => ipcRenderer.invoke('uninstall:removeLeftovers', { items }),
 
   // Auto Run All Tools
   startAutoRun: (clientId, options) => ipcRenderer.invoke('autorun:start', { clientId, options }),
