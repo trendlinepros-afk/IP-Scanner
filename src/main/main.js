@@ -8,7 +8,7 @@
 const path = require('path');
 const fs = require('fs');
 const {
-  app, BrowserWindow, ipcMain, Menu, shell, dialog, nativeTheme, screen,
+  app, BrowserWindow, ipcMain, Menu, shell, dialog, nativeTheme, screen, nativeImage,
 } = require('electron');
 
 const { Scanner } = require('./scanner');
@@ -32,6 +32,14 @@ const report = require('./report');
 const { AutoRun } = require('./autorun');
 const { QualityTest } = require('./quality');
 const uninstaller = require('./uninstaller');
+const startupMgr = require('./startup');
+const junk = require('./junk');
+const installmon = require('./installmon');
+const backups = require('./backups');
+const winutil = require('./winutil');
+
+// A tool to open straight away (used when relaunching elevated).
+const openToolArg = (process.argv.find((a) => a.startsWith('--open-tool=')) || '').split('=')[1] || null;
 
 const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 // electron-builder's portable target exposes this env var at runtime.
@@ -152,6 +160,13 @@ function wireScreenshot(outPath) {
       const script = `(function(){try{ if(window.__demoNav){window.__demoNav(${JSON.stringify(view)});return 'ok';} return 'no-demoNav'; }catch(e){return 'ERR:'+e.message;}})()`;
       wc.executeJavaScript(script).then(() => setTimeout(async () => {
         try {
+          // Optional probe (tests only): run extra JS before capturing, e.g. to scroll.
+          if (process.env.IPSCANNER_SHOT_JS) {
+            const r = await wc.executeJavaScript(process.env.IPSCANNER_SHOT_JS).catch((e) => `ERR:${e.message}`);
+            // eslint-disable-next-line no-console
+            console.log('SHOT_JS', JSON.stringify(r));
+            await new Promise((res) => setTimeout(res, 300));
+          }
           const img = await wc.capturePage();
           fs.writeFileSync(outPath, img.toPNG());
           // eslint-disable-next-line no-console
@@ -324,6 +339,50 @@ function send(channel, payload) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
 }
 
+// Program / Store-app icons as data URLs (cached). Executables and .ico files
+// use the shell icon; images (Store logos) are loaded and scaled directly.
+const iconCache = new Map();
+async function loadIcons(paths) {
+  const out = {};
+  const todo = [...new Set(paths.filter((p) => typeof p === 'string' && p))].slice(0, 600);
+  await Promise.all(todo.map(async (p) => {
+    if (iconCache.has(p)) { out[p] = iconCache.get(p); return; }
+    let url = null;
+    try {
+      if (fs.existsSync(p)) {
+        if (/\.(png|jpe?g|bmp|gif)$/i.test(p)) {
+          const img = nativeImage.createFromPath(p);
+          if (!img.isEmpty()) url = img.resize({ width: 32, height: 32, quality: 'best' }).toDataURL();
+        } else {
+          const img = await app.getFileIcon(p, { size: 'normal' });
+          if (img && !img.isEmpty()) url = img.toDataURL();
+        }
+      }
+    } catch (_) { url = null; }
+    iconCache.set(p, url);
+    out[p] = url;
+  }));
+  return out;
+}
+
+// Relaunch IT Tools elevated (UAC prompt), reopening the given tool.
+async function relaunchAsAdmin(tool) {
+  if (process.platform !== 'win32') return { ok: false, error: 'Windows only.' };
+  const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+  const args = [...(app.isPackaged ? [] : [app.getAppPath()]), ...(tool ? [`--open-tool=${tool}`] : [])];
+  const argList = args.length ? ` -ArgumentList ${args.map((a) => `'${winutil.psEsc(a.includes(' ') ? `"${a}"` : a)}'`).join(',')}` : '';
+  app.releaseSingleInstanceLock(); // let the elevated instance take over
+  try {
+    const out = await winutil.runPowerShell(`try { Start-Process -FilePath '${winutil.psEsc(exe)}'${argList} -Verb RunAs -ErrorAction Stop; 'OK' } catch { 'ERR:' + $_.Exception.Message }`, { timeout: 120000 });
+    if (/ERR:/.test(out)) throw new Error((out.split('ERR:')[1] || '').trim() || 'Elevation was cancelled.');
+    setTimeout(() => app.quit(), 300);
+    return { ok: true };
+  } catch (err) {
+    app.requestSingleInstanceLock();
+    return { ok: false, error: /cancel/i.test(err.message) ? 'Elevation was cancelled.' : err.message };
+  }
+}
+
 // --------------------------------------------------------------------------
 // IPC surface
 // --------------------------------------------------------------------------
@@ -339,6 +398,7 @@ function registerIpc() {
     node: process.versions.node,
     ouiCount: oui.size(),
     updatesSupported: updateManager ? updateManager.supported() : false,
+    openTool: openToolArg,
   }));
 
   ipcMain.handle('net:interfaces', () => network.listInterfaces());
@@ -594,18 +654,100 @@ function registerIpc() {
 
   // --- App Uninstaller + registry / leftover cleaner (Windows) ---
   ipcMain.handle('uninstall:list', () => uninstaller.listApps());
-  ipcMain.handle('uninstall:start', (_e, { apps, silent, scanAfter }) => {
+  ipcMain.handle('uninstall:start', (_e, { apps, silent, scanAfter, mode, restorePoint }) => {
     if (uninstallJob && uninstallJob.running) return { ok: false, error: 'An uninstall is already in progress' };
     uninstallJob = new uninstaller.Uninstaller();
     uninstallJob.on('progress', (p) => send('uninstall:progress', p));
     uninstallJob.on('done', (p) => send('uninstall:done', p));
-    uninstallJob.run(apps || [], { silent, scanAfter })
+    uninstallJob.run(apps || [], { silent, scanAfter, mode, restorePoint })
       .catch((err) => send('uninstall:done', { error: err.message, results: [], leftovers: [] }));
     return { ok: true };
   });
   ipcMain.handle('uninstall:cancel', () => { if (uninstallJob) uninstallJob.cancel(); return { ok: true }; });
-  ipcMain.handle('uninstall:scan', (_e, { app }) => uninstaller.scanLeftovers(app));
-  ipcMain.handle('uninstall:removeLeftovers', (_e, { items }) => uninstaller.removeLeftovers(items || []));
+  ipcMain.handle('uninstall:scan', (_e, { app, mode }) => uninstaller.scanLeftovers(app, { mode }));
+  ipcMain.handle('uninstall:forcedScan', (_e, opts) => uninstaller.forcedScan(opts || {}));
+  ipcMain.handle('uninstall:removeLeftovers', (_e, { items, label }) => uninstaller.removeLeftovers(items || [], { label }));
+  ipcMain.handle('uninstall:repair', (_e, { app }) => uninstaller.repairApp(app || {}));
+  ipcMain.handle('uninstall:regedit', (_e, { app }) => {
+    if (!app || !app.regPath) return { ok: false, error: 'No registry entry for this program.' };
+    return uninstaller.openInRegedit(uninstaller._internals.regToPs(uninstaller._internals.hiveShort(app.regPath)));
+  });
+  ipcMain.handle('uninstall:removeEntry', (_e, { app }) => {
+    if (!app || !app.regPath) return { ok: false, error: 'No registry entry for this program.' };
+    const p = uninstaller._internals.regToPs(uninstaller._internals.hiveShort(app.regPath));
+    // Only ever an Uninstall\<key> entry.
+    if (!/\\CurrentVersion\\Uninstall\\[^\\]+$/i.test(p)) return { ok: false, error: 'Not an uninstall entry.' };
+    return uninstaller.removeLeftovers([{ kind: 'registry', path: p }], { label: `Removed entry: ${app.name}` });
+  });
+  ipcMain.handle('uninstall:openFolder', (_e, { path: p }) => {
+    if (!p || !fs.existsSync(p)) return { ok: false, error: 'Folder not found.' };
+    shell.openPath(p);
+    return { ok: true };
+  });
+  ipcMain.handle('uninstall:search', (_e, { name }) => {
+    shell.openExternal(`https://www.google.com/search?q=${encodeURIComponent(String(name || ''))}`);
+    return { ok: true };
+  });
+  ipcMain.handle('uninstall:export', async (_e, { format, apps }) => {
+    const ext = format === 'html' ? 'html' : 'csv';
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export program list',
+      defaultPath: `Installed programs.${ext}`,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    });
+    if (canceled || !filePath) return { ok: false, canceled: true };
+    fs.writeFileSync(filePath, uninstaller.exportList(ext, apps || []), 'utf8');
+    shell.openPath(filePath);
+    return { ok: true, filePath };
+  });
+
+  // --- Startup manager ---
+  ipcMain.handle('startup:list', () => startupMgr.list());
+  ipcMain.handle('startup:setEnabled', (_e, { id, enabled }) => startupMgr.setEnabled(id, !!enabled));
+  ipcMain.handle('startup:remove', (_e, { id }) => startupMgr.remove(id));
+
+  // --- Junk files cleaner ---
+  ipcMain.handle('junk:scan', () => junk.scan());
+  ipcMain.handle('junk:clean', (_e, { ids }) => junk.clean(ids || []));
+
+  // --- Install monitor / traced programs ---
+  ipcMain.handle('monitor:status', () => installmon.status());
+  ipcMain.handle('monitor:start', () => installmon.start());
+  ipcMain.handle('monitor:stop', (_e, { name }) => installmon.stop(name));
+  ipcMain.handle('monitor:cancel', () => installmon.cancel());
+  ipcMain.handle('monitor:runInstaller', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose an installer to run while monitoring',
+      properties: ['openFile'],
+      filters: [{ name: 'Installers', extensions: ['exe', 'msi', 'msix', 'appx'] }, { name: 'All Files', extensions: ['*'] }],
+    });
+    if (canceled || !filePaths || !filePaths[0]) return { ok: false, canceled: true };
+    const err = await shell.openPath(filePaths[0]);
+    return err ? { ok: false, error: err } : { ok: true, path: filePaths[0] };
+  });
+  ipcMain.handle('traces:list', () => installmon.listTraces());
+  ipcMain.handle('traces:get', (_e, { id }) => installmon.getTrace(id));
+  ipcMain.handle('traces:delete', (_e, { id }) => installmon.deleteTrace(id));
+  ipcMain.handle('traces:uninstall', (_e, { id, runUninstaller, paths }) => installmon.uninstallTrace(id, { runUninstaller, paths }));
+
+  // --- Backups ---
+  ipcMain.handle('backups:list', () => backups.list());
+  ipcMain.handle('backups:restore', (_e, { id }) => backups.restore(id));
+  ipcMain.handle('backups:delete', (_e, { id }) => backups.remove(id));
+  ipcMain.handle('backups:openFolder', (_e, { id }) => {
+    const dir = id ? path.join(backups.root(), path.basename(String(id))) : backups.root();
+    shell.openPath(dir);
+    return { ok: true };
+  });
+
+  // --- System helpers (elevation, icons, pickers) ---
+  ipcMain.handle('system:isAdmin', () => winutil.isAdmin());
+  ipcMain.handle('system:relaunchAdmin', (_e, { tool }) => relaunchAsAdmin(tool));
+  ipcMain.handle('system:icons', (_e, { paths }) => loadIcons(paths || []));
+  ipcMain.handle('system:pickFolder', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { title: 'Choose the program folder', properties: ['openDirectory'] });
+    return canceled || !filePaths ? null : filePaths[0];
+  });
 
   // --- PDF report ---
   ipcMain.handle('report:generate', async (_e, { id, open }) => {
@@ -659,6 +801,8 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     store.init(app);
+    backups.configure({ dataDir: app.getPath('userData') });
+    installmon.configure({ dataDir: app.getPath('userData') });
 
     // Headless self-test: exercise the client store + PDF report generation.
     if (process.env.IPSCANNER_SELFTEST) {

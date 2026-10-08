@@ -708,13 +708,15 @@ NT.init = async () => {
   NT.refreshNetPill();
   setInterval(() => { if (NT.state.view === 'home') NT.refreshNetPill(); }, 30000);
 
-  // Open to the Clients screen.
+  // Open to the Clients screen (or straight into a tool after an elevated relaunch).
   NT.showClients();
+  if (NT.state.info.openTool && NT._viewById(NT.state.info.openTool)) NT.showView(NT.state.info.openTool);
 };
 
 // ---- demo navigation for screenshots ------------------------------------
-NT.__demoNav = (view) => {
+NT.__demoNav = (target) => {
   NT._demo = true; // suppress live auto-loads so demo data is shown
+  const [view, sub] = String(target || '').split(':');
   if (view === 'clients') { NT.activeClient = null; NT.showClients(); return; }
   // Ensure an active client so the dashboard and tools render.
   if (!NT.activeClient) NT.activeClient = { id: '__demo__', name: 'Acme Corp', company: 'Acme Corporation' };
@@ -722,6 +724,6 @@ NT.__demoNav = (view) => {
   if (view === 'home' || !view) { NT.goHome(); return; }
   NT.showView(view);
   const def = NT._viewById(view);
-  if (def && def.demo) { try { def.demo(); } catch (_) { /* */ } }
+  if (def && def.demo) { try { def.demo(sub); } catch (_) { /* */ } }
 };
 window.__demoNav = NT.__demoNav;

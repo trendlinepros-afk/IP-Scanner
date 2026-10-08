@@ -47,7 +47,8 @@ ok('parseAppsJson filters + normalizes', () => {
   assert.ok(names.includes('Widget MSI'), 'keeps MSI app');
   assert.ok(names.includes('Windows Calculator'), 'store friendly name');
   assert.ok(!names.some((n) => /KB5001|Security Update|Update for/.test(n)), 'drops updates');
-  assert.ok(!names.includes('Hidden System Thing'), 'drops system component');
+  const sys = apps.find((a) => a.name === 'Hidden System Thing');
+  assert.ok(sys && sys.system === true, 'keeps system component but flags it');
   assert.ok(!names.includes('Orphan Entry'), 'drops entries with no uninstall method');
   assert.ok(!names.some((n) => /VCLibs|Resource|NonRemovable/.test(n)), 'drops store frameworks/resources/non-removable');
   // sorted ascending by name
@@ -183,6 +184,107 @@ ok('hive path conversions round-trip', () => {
 
 ok('normName strips punctuation', () => {
   assert.strictEqual(normName('7-Zip 24.07 (x64)'), '7zip2407x64');
+});
+
+// ---- Pro features -------------------------------------------------------
+const X = u._internals;
+
+ok('cleanPublisher turns certificate DNs into names', () => {
+  assert.strictEqual(X.cleanPublisher('CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US'), 'Microsoft Corporation');
+  assert.strictEqual(X.cleanPublisher('CN=4975D53F-AA7E-49A5-8B49-EA4FDC1BB66B'), '');
+  assert.strictEqual(X.cleanPublisher('CN=4975D53F-AA7E-49A5-8B49-EA4FDC1BB66B, O=Canva'), 'Canva');
+  assert.strictEqual(X.cleanPublisher('Igor Pavlov'), 'Igor Pavlov');
+});
+
+ok('store apps use the Start-menu display name; background packages are flagged', () => {
+  const apps = u.parseAppsJson(JSON.stringify([
+    { type: 'store', name: 'SpotifyAB.SpotifyMusic', displayName: 'Spotify', publisher: 'CN=5A1B...', publisherDisplayName: 'Spotify AB', packageFullName: 's1' },
+    { type: 'store', name: '1527c705-839a-4832-9118-54d4Bd6a0c89', packageFullName: 's2' },
+    { type: 'store', name: 'Microsoft.Foo', displayName: 'ms-resource:AppName', packageFullName: 's3' },
+  ]));
+  const sp = apps.find((a) => a.packageFullName === 's1');
+  assert.strictEqual(sp.name, 'Spotify'); assert.strictEqual(sp.publisher, 'Spotify AB'); assert.strictEqual(sp.system, false);
+  assert.strictEqual(apps.find((a) => a.packageFullName === 's2').system, true);
+  assert.strictEqual(apps.find((a) => a.packageFullName === 's3').system, true);
+});
+
+ok('parseIconPath / exeFromCommand', () => {
+  assert.strictEqual(X.parseIconPath('"C:\\App\\app.exe",0'), 'C:\\App\\app.exe');
+  assert.strictEqual(X.parseIconPath('C:\\App\\app.ico'), 'C:\\App\\app.ico');
+  assert.strictEqual(X.parseIconPath('C:\\App\\app.exe,-101'), 'C:\\App\\app.exe');
+  assert.strictEqual(X.exeFromCommand('"C:\\Program Files\\X\\x.exe" --flag'), 'C:\\Program Files\\X\\x.exe');
+  assert.strictEqual(X.exeFromCommand('C:\\X\\x.exe /S'), 'C:\\X\\x.exe');
+});
+
+ok('scan modes widen the search', () => {
+  const app = { name: 'Widget', rawName: 'Widget', publisher: 'WidgetCo', installLocation: 'C:\\Program Files\\Widget', iconPath: 'C:\\Program Files\\Widget\\widget.exe' };
+  const safe = X.candidateFolders(app, ENV, 'safe');
+  const mod = X.candidateFolders(app, ENV, 'moderate');
+  const adv = X.candidateFolders(app, { ...ENV, TEMP: 'C:\\Users\\me\\AppData\\Local\\Temp' }, 'advanced');
+  assert.strictEqual(safe.length, 1);
+  assert.ok(mod.length > safe.length);
+  assert.ok(mod.some((f) => /\\WidgetCo\\Widget$/.test(f)), 'publisher\\product folder');
+  assert.ok(adv.some((f) => /Temp\\Widget$/.test(f)), 'temp in advanced');
+  assert.strictEqual(X.candidateRegistryKeys({ ...app, regPath: 'HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Widget' }, 'safe').length, 1);
+  const advKeys = X.candidateRegistryKeys(app, 'advanced');
+  assert.ok(advKeys.some((k) => /App Paths\\widget\.exe$/.test(k)), 'App Paths in advanced');
+});
+
+ok('container keys can never be deleted wholesale', () => {
+  for (const k of ['HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+    'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths', 'HKCU:\\SOFTWARE\\Classes', 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall']) {
+    assert.ok(X.isProtectedRegPath(k), k);
+  }
+  assert.ok(!X.isProtectedRegPath('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Widget'));
+  assert.ok(!X.isProtectedRegValue('HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', 'Widget'));
+  assert.ok(X.isProtectedRegValue('HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', ''));
+  assert.ok(X.isProtectedRegValue('HKCU:\\Environment', 'Path'));
+});
+
+ok('folders shared with other installed programs are skipped', () => {
+  assert.ok(X.sharedWithOthers('C:\\Program Files\\Suite', ['C:\\Program Files\\Suite\\OtherApp']));
+  assert.ok(X.sharedWithOthers('C:\\Program Files\\Suite', ['c:\\program files\\suite\\']));
+  assert.ok(!X.sharedWithOthers('C:\\Program Files\\Widget', ['C:\\Program Files\\WidgetPro']));
+});
+
+ok('runValueMatches finds the app\'s startup entries only', () => {
+  const app = { name: 'Widget', rawName: 'Widget', installLocation: 'C:\\Program Files\\Widget' };
+  assert.ok(X.runValueMatches({ name: 'WidgetTray', data: '"C:\\X\\tray.exe"' }, app));
+  assert.ok(X.runValueMatches({ name: 'Helper', data: '"C:\\Program Files\\Widget\\helper.exe" -min' }, app));
+  assert.ok(!X.runValueMatches({ name: 'OneDrive', data: '"C:\\Program Files\\Microsoft OneDrive\\OneDrive.exe"' }, app));
+});
+
+ok('install monitor diff reports only new top-level items', () => {
+  const { diffSnapshots } = require('../src/main/installmon')._internals;
+  const before = { fs: ['C:\\Program Files\\Old'], keys: ['HKCU:\\SOFTWARE\\Old'], uninstall: [], run: [] };
+  const after = {
+    fs: ['C:\\Program Files\\Old', 'C:\\Program Files\\New', 'C:\\Program Files\\New\\sub', 'C:\\Users\\me\\Desktop\\New.lnk'],
+    keys: ['HKCU:\\SOFTWARE\\Old', 'HKCU:\\SOFTWARE\\NewCo', 'HKCU:\\SOFTWARE\\NewCo\\New'],
+    uninstall: [{ path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\New', name: 'New App', uninstallString: 'x' }],
+    run: [{ key: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', name: 'New', data: 'new.exe' }],
+  };
+  const d = diffSnapshots(before, after);
+  const paths = d.items.map((i) => i.path);
+  assert.ok(paths.includes('C:\\Program Files\\New') && !paths.includes('C:\\Program Files\\New\\sub'), 'collapsed to parent');
+  assert.ok(paths.includes('HKCU:\\SOFTWARE\\NewCo') && !paths.includes('HKCU:\\SOFTWARE\\NewCo\\New'));
+  assert.ok(d.items.some((i) => i.kind === 'shortcut'));
+  assert.ok(d.items.some((i) => i.kind === 'regvalue' && i.value === 'New'));
+  assert.strictEqual(d.uninstall.length, 1);
+  assert.ok(!paths.includes('C:\\Program Files\\Old'));
+});
+
+ok('startup StartupApproved state decoding', () => {
+  const { isEnabledState } = require('../src/main/startup')._internals;
+  assert.ok(isEnabledState(-1)); assert.ok(isEnabledState(2)); assert.ok(isEnabledState(6));
+  assert.ok(!isEnabledState(3)); assert.ok(!isEnabledState(7));
+});
+
+ok('junk cleaner refuses shallow roots', () => {
+  const { safeRoot, categories } = require('../src/main/junk')._internals;
+  assert.ok(!safeRoot('C:\\')); assert.ok(!safeRoot('C:\\Windows')); assert.ok(!safeRoot('relative\\path\\x'));
+  assert.ok(safeRoot('C:\\Users\\me\\AppData\\Local\\Temp'));
+  const cats = categories(ENV);
+  assert.ok(cats.every((c) => c.special || c.roots.every(safeRoot)), 'every junk root is deep enough');
 });
 
 // eslint-disable-next-line no-console

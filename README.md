@@ -44,16 +44,31 @@ Beyond the per-client diagnostics, the **Clients** screen has an **Other Tools**
 section (bottom of the page) for standalone system utilities that don't need a
 client:
 
-| Tool | What it does | Modeled on |
-|---|---|---|
-| **🗑 App Uninstaller** | Lists installed **programs** (registry Uninstall keys, all roots) and **Store / UWP apps**; **bulk-select** with checkboxes and uninstall one or many. After uninstalling it can **scan for leftovers** — orphaned **registry entries** and **files/folders** the program's own uninstaller left behind — which you review and delete (a built-in **registry cleaner**). | Revo Uninstaller |
+### 🗑 App Uninstaller (modeled on Revo Uninstaller Pro)
+
+| Tab | What it does |
+|---|---|
+| **📦 Programs** | Every installed **desktop program** (all registry Uninstall roots) and **Store app**, with real icons, publisher, version, size and install date. Search, sort, filter (Desktop / Store / Recently installed / Large), show or hide system components. **Bulk-select** and uninstall many in one go, optionally **silent**, optionally after creating a **System Restore point**. Right-click a program for **Repair / Modify**, **Forced uninstall**, **Open install folder**, **Open in Registry Editor**, **Search online**, **Properties** and **Remove entry** (for broken entries). **Export** the list to CSV or HTML. |
+| **Leftover scan** (registry cleaner) | After uninstalling, choose whether to scan for leftovers, in **Safe**, **Moderate** or **Advanced** mode: registry keys and values, AppData / ProgramData / Program Files folders, Start-menu and desktop shortcuts, startup entries, App Paths and file associations, temp folders, empty publisher folders. Review everything (grouped by program, registry vs files) and delete only what you tick. |
+| **🛰 Traced Programs** | **Install Monitor**: take a snapshot, install a program, stop — IT Tools records every folder, shortcut, registry key and startup entry the install created. Later, remove a traced program *completely* (running its own uninstaller first if you like), even if that uninstaller is broken. |
+| **🔎 Forced Uninstall** | Remove the remnants of programs that are half-uninstalled, broken, or no longer listed — by name, publisher and/or folder — including orphaned Uninstall entries. |
+| **⚡ Startup** | Everything that starts at sign-in (Run / RunOnce keys and Startup folders, per-user and all-users). **Enable/disable** exactly like Task Manager does (reversible), or delete. |
+| **🧹 Junk Cleaner** | Temp files, Windows temp, crash dumps, error reports, thumbnail cache, Chrome / Edge / Brave / Firefox caches, Windows Update downloads and the Recycle Bin — with sizes before you clean. Recently modified and in-use files are skipped. |
+| **🛡 Backups** | **Every deletion is backed up first**: registry items are exported to `.reg` files and can be **restored** here; files and folders go to the **Recycle Bin**. |
+
+There's a **Run as administrator** button that restarts IT Tools elevated and
+reopens the uninstaller — needed for machine-wide (`HKLM`, `Program Files`)
+items and restore points.
+
+**Safety.** Leftover detection is deliberately conservative, and every deletion
+is re-validated in the main process (the UI can't widen it): protected system
+paths, critical registry containers (e.g. `…\CurrentVersion\Run`, `…\Uninstall`),
+shallow keys and any folder shared with another still-installed program are
+refused. The junk cleaner only ever empties a fixed list of known junk
+locations, and the startup manager only acts on entries it re-reads itself.
 
 The uninstaller is **Windows-only** (it drives `powershell`, `msiexec` and
-`reg`); on other platforms it opens in a clearly-labelled preview mode. Leftover
-detection is deliberately **conservative** and every deletion is explicit,
-user-selected, and re-validated in the main process — protected system paths
-and shallow/critical registry keys are refused. Removing entries under
-`HKLM` or `Program Files` may require running the app **as administrator**.
+`reg`); on other platforms it opens in a labelled preview mode.
 
 ---
 

@@ -102,11 +102,54 @@ const api = {
   // App uninstaller + registry / leftover cleaner
   listInstalledApps: () => ipcRenderer.invoke('uninstall:list'),
   uninstallApps: (apps, opts) => ipcRenderer.invoke('uninstall:start', {
-    apps, silent: !!(opts && opts.silent), scanAfter: !!(opts && opts.scanAfter),
+    apps,
+    silent: !!(opts && opts.silent),
+    scanAfter: !!(opts && opts.scanAfter),
+    mode: opts && opts.mode,
+    restorePoint: !!(opts && opts.restorePoint),
   }),
   cancelUninstall: () => ipcRenderer.invoke('uninstall:cancel'),
-  scanLeftovers: (app) => ipcRenderer.invoke('uninstall:scan', { app }),
-  removeLeftovers: (items) => ipcRenderer.invoke('uninstall:removeLeftovers', { items }),
+  scanLeftovers: (app, mode) => ipcRenderer.invoke('uninstall:scan', { app, mode }),
+  forcedScan: (opts) => ipcRenderer.invoke('uninstall:forcedScan', opts),
+  removeLeftovers: (items, label) => ipcRenderer.invoke('uninstall:removeLeftovers', { items, label }),
+  repairApp: (app) => ipcRenderer.invoke('uninstall:repair', { app }),
+  openInRegedit: (app) => ipcRenderer.invoke('uninstall:regedit', { app }),
+  removeUninstallEntry: (app) => ipcRenderer.invoke('uninstall:removeEntry', { app }),
+  openAppFolder: (path) => ipcRenderer.invoke('uninstall:openFolder', { path }),
+  searchOnline: (name) => ipcRenderer.invoke('uninstall:search', { name }),
+  exportAppList: (format, apps) => ipcRenderer.invoke('uninstall:export', { format, apps }),
+
+  // Startup manager
+  listStartup: () => ipcRenderer.invoke('startup:list'),
+  setStartupEnabled: (id, enabled) => ipcRenderer.invoke('startup:setEnabled', { id, enabled }),
+  removeStartup: (id) => ipcRenderer.invoke('startup:remove', { id }),
+
+  // Junk files cleaner
+  scanJunk: () => ipcRenderer.invoke('junk:scan'),
+  cleanJunk: (ids) => ipcRenderer.invoke('junk:clean', { ids }),
+
+  // Install monitor / traced programs
+  monitorStatus: () => ipcRenderer.invoke('monitor:status'),
+  monitorStart: () => ipcRenderer.invoke('monitor:start'),
+  monitorStop: (name) => ipcRenderer.invoke('monitor:stop', { name }),
+  monitorCancel: () => ipcRenderer.invoke('monitor:cancel'),
+  monitorRunInstaller: () => ipcRenderer.invoke('monitor:runInstaller'),
+  listTraces: () => ipcRenderer.invoke('traces:list'),
+  getTrace: (id) => ipcRenderer.invoke('traces:get', { id }),
+  deleteTrace: (id) => ipcRenderer.invoke('traces:delete', { id }),
+  uninstallTrace: (id, runUninstaller, paths) => ipcRenderer.invoke('traces:uninstall', { id, runUninstaller, paths }),
+
+  // Backups
+  listBackups: () => ipcRenderer.invoke('backups:list'),
+  restoreBackup: (id) => ipcRenderer.invoke('backups:restore', { id }),
+  deleteBackup: (id) => ipcRenderer.invoke('backups:delete', { id }),
+  openBackupFolder: (id) => ipcRenderer.invoke('backups:openFolder', { id }),
+
+  // System helpers
+  isAdmin: () => ipcRenderer.invoke('system:isAdmin'),
+  relaunchAsAdmin: (tool) => ipcRenderer.invoke('system:relaunchAdmin', { tool }),
+  fileIcons: (paths) => ipcRenderer.invoke('system:icons', { paths }),
+  pickFolder: () => ipcRenderer.invoke('system:pickFolder'),
 
   // Auto Run All Tools
   startAutoRun: (clientId, options) => ipcRenderer.invoke('autorun:start', { clientId, options }),
